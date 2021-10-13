@@ -305,7 +305,8 @@ merge=$(echo "HGDP_1000GP_ORIEN_TCGA_snps_missing10_merged.vcf.gz")
 #-----------------
 #VCFTOOLS VERSION
 
-vcftools --gzvcf $merge --max-missing 0.90 --remove-indels --chr 1-22 --recode --out merge
+vcftools --gzvcf $merge --max-missing 0.90 --recode --out merge
+# --remove-indels --chr 1-22
 
 bgzip merge.recode.vcf; tabix -f merge.recode.vcf.gz
 merge4=$(echo merge.recode.vcf.gz)
