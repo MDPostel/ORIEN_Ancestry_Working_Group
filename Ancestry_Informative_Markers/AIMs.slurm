@@ -297,7 +297,7 @@ ORIEN5=$(echo ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz
 GP1000_5=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz)
 TCGA5=$(echo TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz)
 
-bcftools merge $HGDP5 $GP1000_5 $ORIEN5 $TCGA5 -Oz -o HGDP_1000GP_ORIEN_TCGA_snps_missing10_merged.vcf.gz --threads $t
+bcftools merge $HGDP5 $GP1000_5 $ORIEN5 $TCGA5 --gvcf $ORIEN_ref2 -Oz -o HGDP_1000GP_ORIEN_TCGA_snps_missing10_merged.vcf.gz --threads $t
 tabix -f HGDP_1000GP_ORIEN_TCGA_snps_missing10_merged.vcf.gz
 
 merge=$(echo "HGDP_1000GP_ORIEN_TCGA_snps_missing10_merged.vcf.gz")
