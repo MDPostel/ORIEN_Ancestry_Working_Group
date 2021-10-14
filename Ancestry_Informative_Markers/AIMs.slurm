@@ -421,6 +421,23 @@ vcftools --gzvcf EAS.vcf.gz --depth --out EAS_postmerge
 vcftools --gzvcf OCE.vcf.gz --depth --out OCE_postmerge
 vcftools --gzvcf MDE.vcf.gz --depth --out MDE_postmerge
 
+vcftools --gzvcf $merge4 --site-depth --out pooled_postmerge
+vcftools --gzvcf $HGDP5 --site-depth --out HGDP_PREmerge
+vcftools --gzvcf $GP1000_5 --site-depth --out 1000GP_PREmerge
+vcftools --gzvcf $TCGA5 --site-depth --out TCGA_PREmerge
+vcftools --gzvcf $ORIEN5 --site-depth --out ORIEN_PREmerge
+vcftools --gzvcf HGDP_postmerge.vcf.gz --site-depth --out HGDP_postmerge
+vcftools --gzvcf ORIEN_postmerge.vcf.gz --site-depth --out ORIEN_postmerge
+vcftools --gzvcf 1000GP_postmerge.vcf.gz --site-depth --out 1000GP_postmerge
+vcftools --gzvcf TCGA_postmerge.vcf.gz --site-depth --out TCGA_postmerge
+vcftools --gzvcf AFR.vcf.gz --depth --site-depth AFR_postmerge
+vcftools --gzvcf EUR.vcf.gz --depth --site-depth EUR_postmerge
+vcftools --gzvcf AMR.vcf.gz --depth --site-depth AMR_postmerge
+vcftools --gzvcf SAS.vcf.gz --depth --site-depth SAS_postmerge
+vcftools --gzvcf EAS.vcf.gz --depth --site-depth EAS_postmerge
+vcftools --gzvcf OCE.vcf.gz --depth --site-depth OCE_postmerge
+vcftools --gzvcf MDE.vcf.gz --depth --site-depth MDE_postmerge
+
 vcftools --gzvcf $merge4 --hap-r2 --out pooled_postmerge
 vcftools --gzvcf $HGDP5 --hap-r2 --out HGDP_PREmerge
 vcftools --gzvcf $GP1000_5 --hap-r2 --out 1000GP_PREmerge
@@ -437,4 +454,4 @@ vcftools --gzvcf SAS.vcf.gz --hap-r2 --out SAS_postmerge
 vcftools --gzvcf EAS.vcf.gz --hap-r2 --out EAS_postmerge
 vcftools --gzvcf OCE.vcf.gz --hap-r2 --out OCE_postmerge
 vcftools --gzvcf MDE.vcf.gz --hap-r2 --out MDE_postmerge
-                                                                                                                                                                                        631,1         Bot
+                                                                                                                                                                                        
