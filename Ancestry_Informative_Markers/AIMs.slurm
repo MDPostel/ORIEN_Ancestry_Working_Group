@@ -322,7 +322,7 @@ bgzip TCGA_postmerge.vcf; tabix -f TCGA_postmerge.vcf.gz
 
 cat HGDP_sample_names.txt > HGDP_1000GP_samples.txt
 cat 1000GP_sample_names.txt >> HGDP_1000GP_samples.txt
-bcftools $merge4 --force-samples -S HGDP_1000GP_samples.txt --threads $t > HGDP_1000GP.vcf
+bcftools view $merge4 --force-samples -S HGDP_1000GP_samples.txt --threads $t > HGDP_1000GP.vcf
 bgzip HGDP_1000GP.vcf; tabix -f HGDP_1000GP.vcf.gz
 
 bcftools view HGDP_1000GP.vcf.gz --force-samples -S AFR.txt -o AFR.vcf.gz --threads $t
