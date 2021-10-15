@@ -322,16 +322,16 @@ bgzip TCGA_postmerge.vcf; tabix -f TCGA_postmerge.vcf.gz
 
 cat HGDP_sample_names.txt > HGDP_1000GP_samples.txt
 cat 1000GP_sample_names.txt >> HGDP_1000GP_samples.txt
-bcftools view $merge4 --force-samples -S HGDP_1000GP_samples.txt --threads $t > HGDP_1000GP.vcf
-bgzip HGDP_1000GP.vcf; tabix -f HGDP_1000GP.vcf.gz
+bcftools view $merge4 --force-samples -S HGDP_1000GP_samples.txt --threads $t -Oz -o HGDP_1000GP.vcf.gz
+tabix -f HGDP_1000GP.vcf.gz
 
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S AFR.txt -o AFR.vcf.gz --threads $t
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S EUR.txt -o EUR.vcf.gz --threads $t
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S AMR.txt -o AMR.vcf.gz --threads $t
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S SAS.txt -o SAS.vcf.gz --threads $t
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S EAS.txt -o EAS.vcf.gz --threads $t
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S OCE.txt -o OCE.vcf.gz --threads $t
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S MDE.txt -o MDE.vcf.gz --threads $t
+bcftools view HGDP_1000GP.vcf.gz --force-samples -S AFR.txt -Oz -o AFR.vcf.gz --threads $t
+bcftools view HGDP_1000GP.vcf.gz --force-samples -S EUR.txt -Oz -o EUR.vcf.gz --threads $t
+bcftools view HGDP_1000GP.vcf.gz --force-samples -S AMR.txt -Oz -o AMR.vcf.gz --threads $t
+bcftools view HGDP_1000GP.vcf.gz --force-samples -S SAS.txt -Oz -o SAS.vcf.gz --threads $t
+bcftools view HGDP_1000GP.vcf.gz --force-samples -S EAS.txt -Oz -o EAS.vcf.gz --threads $t
+bcftools view HGDP_1000GP.vcf.gz --force-samples -S OCE.txt -Oz -o OCE.vcf.gz --threads $t
+bcftools view HGDP_1000GP.vcf.gz --force-samples -S MDE.txt -Oz -o MDE.vcf.gz --threads $t
 
 tabix -f AFR.vcf.gz; tabix -f EUR.vcf.gz; tabix -f AMR.vcf.gz; tabix -f SAS.vcf.gz; tabix -f EAS.vcf.gz; tabix -f OCE.vcf.gz; tabix -f MDE.vcf.gz
 
