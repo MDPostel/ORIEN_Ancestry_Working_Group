@@ -455,3 +455,37 @@ vcftools --gzvcf EAS.vcf.gz --hap-r2 --out EAS_postmerge
 vcftools --gzvcf OCE.vcf.gz --hap-r2 --out OCE_postmerge
 vcftools --gzvcf MDE.vcf.gz --hap-r2 --out MDE_postmerge
                                                                                                                                                                                         
+#-----
+#Fst
+
+#Download lists of HGDP and 1000GP individuals from: https://www.internationalgenome.org/data-portal/sample
+#rename:
+#igsr_samples_HGDP.tsv
+#igsr_samples_1000GP.tsv
+
+#awk -F '\t' -v OFS='\t' '{print $1,$7}' igsr_samples_HGDP.tsv > SampleID_Pop_HGDP.tsv
+#awk -F '\t' -v OFS='\t' '{print $1,$6}' igsr_samples_1000GP.tsv > SampleID_Pop_1000GP.tsv
+
+#awk -F '\t' '{print $2}' SampleID_Pop_HGDP.tsv | sort -u | grep -v Superpopulation > HGDP_pops.txt
+#awk -F '\t' '{print $2}' SampleID_Pop_1000GP.tsv | sort -u | grep -v Superpopulation > 1000GP_pops.txt
+#sed -i 's/Africa (HGDP)/AFR/g' HGDP_pops.txt; sed -i 's/America (HGDP)/AMR/g' HGDP_pops.txt; sed -i 's/Central South Asia (HGDP)/SAS/g' HGDP_pops.txt; sed -i 's/East Asia (HGDP)/EAS/g' HGDP_pops.txt; sed -i 's/Europe (HGDP)/EUR/g' HGDP_pops.txt; sed -i 's/Middle East (HGDP)/MDE/g' HGDP_pops.txt; sed -i 's/Oceania (SGDP)\,Oceania (HGDP)/OCE/g' HGDP_pops.txt; sed -i 's/Oceania (HGDP)/OCE/g' HGDP_pops.txt
+#sed -i 's/Africa (HGDP)/AFR/g' SampleID_Pop_HGDP.tsv; sed -i 's/America (HGDP)/AMR/g' SampleID_Pop_HGDP.tsv; sed -i 's/Central South Asia (HGDP)/SAS/g' SampleID_Pop_HGDP.tsv; sed -i 's/East Asia (HGDP)/EAS/g' SampleID_Pop_HGDP.tsv; sed -i 's/Europe (HGDP)/EUR/g' SampleID_Pop_HGDP.tsv; sed -i 's/Middle East (HGDP)/MDE/g' SampleID_Pop_HGDP.tsv; sed -i 's/Oceania (SGDP)\,Oceania (HGDP)/OCE/g' SampleID_Pop_HGDP.tsv; sed -i 's/Oceania (HGDP)/OCE/g' SampleID_Pop_HGDP.tsv
+
+#grep AFR SampleID_Pop_1000GP.tsv | grep -oe HG[0-9]* -oe NA[0-9]* > AFR.txt; grep AFR SampleID_Pop_HGDP.tsv | grep -o HGDP[0-9]* >> AFR.txt
+#grep AMR SampleID_Pop_1000GP.tsv | grep -oe HG[0-9]* -oe NA[0-9]* > AMR.txt; grep AMR SampleID_Pop_HGDP.tsv | grep -o HGDP[0-9]* >> AMR.txt
+#grep SAS SampleID_Pop_1000GP.tsv | grep -oe HG[0-9]* -oe NA[0-9]* > SAS.txt; grep SAS SampleID_Pop_HGDP.tsv | grep -o HGDP[0-9]* >> SAS.txt
+#grep EAS SampleID_Pop_1000GP.tsv | grep -oe HG[0-9]* -oe NA[0-9]* > EAS.txt; grep EAS SampleID_Pop_HGDP.tsv | grep -o HGDP[0-9]* >> EAS.txt
+#grep EUR SampleID_Pop_1000GP.tsv | grep -oe HG[0-9]* -oe NA[0-9]* > EUR.txt; grep EUR SampleID_Pop_HGDP.tsv | grep -o HGDP[0-9]* >> EUR.txt
+#grep OCE SampleID_Pop_1000GP.tsv | grep -oe HG[0-9]* -oe NA[0-9]* > OCE.txt; grep OCE SampleID_Pop_HGDP.tsv | grep -o HGDP[0-9]* >> OCE.txt
+#grep MDE SampleID_Pop_1000GP.tsv | grep -oe HG[0-9]* -oe NA[0-9]* > MDE.txt; grep MDE SampleID_Pop_HGDP.tsv | grep -o HGDP[0-9]* >> MDE.txt
+
+#step above makes 5 super pops + Oceania + Middle East:
+#AFR
+#AMR
+#SAS
+#EAS
+#EUR
+#OCE = Oceania
+#MDE = Middle East
+
+vcftools --gzvcf HGDP_1000GP.vcf.gz --weir-fst-pop AFR_indivfam.txt --weir-fst-pop AMR_indivfam.txt --weir-fst-pop SAS_indivfam.txt --weir-fst-pop EAS_indivfam.txt --weir-fst-pop EUR_indivfam.txt --weir-fst-pop OCE_indivfam.txt --weir-fst-pop MDE_indivfam.txt --out overall_fsts
