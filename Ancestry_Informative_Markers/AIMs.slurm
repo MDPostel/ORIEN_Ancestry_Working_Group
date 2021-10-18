@@ -488,4 +488,4 @@ vcftools --gzvcf MDE.vcf.gz --hap-r2 --out MDE_postmerge
 #OCE = Oceania
 #MDE = Middle East
 
-vcftools --gzvcf HGDP_1000GP.vcf.gz --weir-fst-pop AFR_indivfam.txt --weir-fst-pop AMR_indivfam.txt --weir-fst-pop SAS_indivfam.txt --weir-fst-pop EAS_indivfam.txt --weir-fst-pop EUR_indivfam.txt --weir-fst-pop OCE_indivfam.txt --weir-fst-pop MDE_indivfam.txt --out overall_fsts
+vcftools --gzvcf HGDP_1000GP.vcf.gz --weir-fst-pop AFR.txt --weir-fst-pop AMR.txt --weir-fst-pop SAS.txt --weir-fst-pop EAS.txt --weir-fst-pop EUR.txt --weir-fst-pop OCE.txt --weir-fst-pop MDE.txt --out overall_fsts
