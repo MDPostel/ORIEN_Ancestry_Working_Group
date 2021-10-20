@@ -489,3 +489,11 @@ vcftools --gzvcf MDE.vcf.gz --hap-r2 --out MDE_postmerge
 #MDE = Middle East
 
 vcftools --gzvcf HGDP_1000GP.vcf.gz --weir-fst-pop AFR.txt --weir-fst-pop AMR.txt --weir-fst-pop SAS.txt --weir-fst-pop EAS.txt --weir-fst-pop EUR.txt --weir-fst-pop OCE.txt --weir-fst-pop MDE.txt --out overall_fsts
+
+#---- 
+#QC: transition/transversion ratio
+bcftools stats $ORIEN5 | grep "TSTV"
+bcftools stats $TCGA5 | grep "TSTV"
+bcftools stats $HGDP5 | grep "TSTV"
+bcftools stats $GP10005 | grep "TSTV"
+bcftools stats $merge4 | grep "TSTV"
