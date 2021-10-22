@@ -291,38 +291,43 @@ tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz
 tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz
 
 #------
-#MERGE:
+#ISEC:
 HGDP5=$(echo HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz)
 ORIEN5=$(echo ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz)
 GP1000_5=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz)
 TCGA5=$(echo TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz)
 
-bcftools merge $HGDP5 $GP1000_5 $ORIEN5 $TCGA5 --gvcf $ORIEN_ref2 -Oz -o HGDP_1000GP_ORIEN_TCGA_snps_missing10_merged.vcf.gz --threads $t
-tabix -f HGDP_1000GP_ORIEN_TCGA_snps_missing10_merged.vcf.gz
+vcftools --gzvcf $HGDP5 --maf 0.01 --recode --out HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_maf1
+bgzip HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_maf1.vcf; tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_maf1.vcf.gz
+vcftools --gzvcf $GP1000_5 --maf 0.01 --recode --out GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_maf1
+bgzip GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_maf1.vcf; tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_maf1.vcf.gz
 
-merge=$(echo "HGDP_1000GP_ORIEN_TCGA_snps_missing10_merged.vcf.gz")
+HGDP6=$(echo HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_maf1.vcf.gz)
+GP1000_6=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_maf1.vcf.gz)
+
+bcftools isec $HGDP6 $GP1000_6 $ORIEN5 $TCGA5 -n=4 -Oz -o HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz -p /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/AIMs
+tabix -f HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz
+
+isec=$(echo HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz)
 
 #-----------------
 #VCFTOOLS VERSION
 
-vcftools --gzvcf $merge --max-missing 0.90 --recode --out merge
-# --remove-indels --chr 1-22
+bcftools view $isec --force-samples -S HGDP_sample_names.txt --threads $t > HGDP_post.vcf
 
-bgzip merge.recode.vcf; tabix -f merge.recode.vcf.gz
-merge4=$(echo merge.recode.vcf.gz)
+bcftools view $isec --force-samples -S HGDP_sample_names.txt --threads $t > HGDP_post.vcf
+bcftools view $isec --force-samples -S ORIEN_sample_names.txt --threads $t > ORIEN_post.vcf
+bcftools view $isec --force-samples -S 1000GP_sample_names.txt --threads $t > 1000GP_post.vcf
+bcftools view $isec --force-samples -S TCGA_sample_names.txt --threads $t > TCGA_post.vcf
 
-bcftools view $merge4 --force-samples -S HGDP_sample_names.txt --threads $t > HGDP_postmerge.vcf
-bcftools view $merge4 --force-samples -S ORIEN_sample_names.txt --threads $t > ORIEN_postmerge.vcf
-bcftools view $merge4 --force-samples -S 1000GP_sample_names.txt --threads $t > 1000GP_postmerge.vcf
-bcftools view $merge4 --force-samples -S TCGA_sample_names.txt --threads $t > TCGA_postmerge.vcf
-bgzip HGDP_postmerge.vcf; tabix -f HGDP_postmerge.vcf.gz
-bgzip ORIEN_postmerge.vcf; tabix -f ORIEN_postmerge.vcf.gz
-bgzip 1000GP_postmerge.vcf; tabix -f 1000GP_postmerge.vcf.gz
-bgzip TCGA_postmerge.vcf; tabix -f TCGA_postmerge.vcf.gz
+bgzip HGDP_post.vcf; tabix -f HGDP_post.vcf.gz
+bgzip ORIEN_post.vcf; tabix -f ORIEN_post.vcf.gz
+bgzip 1000GP_post.vcf; tabix -f 1000GP_post.vcf.gz
+bgzip TCGA_post.vcf; tabix -f TCGA_post.vcf.gz
 
 cat HGDP_sample_names.txt > HGDP_1000GP_samples.txt
 cat 1000GP_sample_names.txt >> HGDP_1000GP_samples.txt
-bcftools view $merge4 --force-samples -S HGDP_1000GP_samples.txt --threads $t -Oz -o HGDP_1000GP.vcf.gz
+bcftools view $isec --force-samples -S HGDP_1000GP_samples.txt --threads $t -Oz -o HGDP_1000GP.vcf.gz
 tabix -f HGDP_1000GP.vcf.gz
 
 bcftools view HGDP_1000GP.vcf.gz --force-samples -S AFR.txt -Oz -o AFR.vcf.gz --threads $t
@@ -335,125 +340,124 @@ bcftools view HGDP_1000GP.vcf.gz --force-samples -S MDE.txt -Oz -o MDE.vcf.gz --
 
 tabix -f AFR.vcf.gz; tabix -f EUR.vcf.gz; tabix -f AMR.vcf.gz; tabix -f SAS.vcf.gz; tabix -f EAS.vcf.gz; tabix -f OCE.vcf.gz; tabix -f MDE.vcf.gz
 
-vcftools --gzvcf $merge4 --hardy --out pooled_postmerge
-vcftools --gzvcf $HGDP5 --hardy --out HGDP_PREmerge
-vcftools --gzvcf $GP1000_5 --hardy --out 1000GP_PREmerge
-vcftools --gzvcf $TCGA5 --hardy --out TCGA_PREmerge
-vcftools --gzvcf $ORIEN5 --hardy --out ORIEN_PREmerge
-vcftools --gzvcf HGDP_postmerge.vcf.gz --hardy --out HGDP_postmerge
-vcftools --gzvcf ORIEN_postmerge.vcf.gz --hardy --out ORIEN_postmerge
-vcftools --gzvcf 1000GP_postmerge.vcf.gz --hardy --out 1000GP_postmerge
-vcftools --gzvcf TCGA_postmerge.vcf.gz --hardy --out TCGA_postmerge
-vcftools --gzvcf AFR.vcf.gz --hardy --out AFR_postmerge
-vcftools --gzvcf EUR.vcf.gz --hardy --out EUR_postmerge
-vcftools --gzvcf AMR.vcf.gz --hardy --out AMR_postmerge
-vcftools --gzvcf SAS.vcf.gz --hardy --out SAS_postmerge
-vcftools --gzvcf EAS.vcf.gz --hardy --out EAS_postmerge
-vcftools --gzvcf OCE.vcf.gz --hardy --out OCE_postmerge
-vcftools --gzvcf MDE.vcf.gz --hardy --out MDE_postmerge
+vcftools --gzvcf $isec --hardy --out pooled_post
+vcftools --gzvcf $HGDP6 --hardy --out HGDP_pre
+vcftools --gzvcf $GP1000_6 --hardy --out 1000GP_pre
+vcftools --gzvcf $TCGA5 --hardy --out TCGA_pre
+vcftools --gzvcf $ORIEN5 --hardy --out ORIEN_pre
+vcftools --gzvcf HGDP_post.vcf.gz --hardy --out HGDP_post
+vcftools --gzvcf ORIEN_post.vcf.gz --hardy --out ORIEN_post
+vcftools --gzvcf 1000GP_post.vcf.gz --hardy --out 1000GP_post
+vcftools --gzvcf TCGA_post.vcf.gz --hardy --out TCGA_post
+vcftools --gzvcf AFR.vcf.gz --hardy --out AFR_post
+vcftools --gzvcf EUR.vcf.gz --hardy --out EUR_post
+vcftools --gzvcf AMR.vcf.gz --hardy --out AMR_post
+vcftools --gzvcf SAS.vcf.gz --hardy --out SAS_post
+vcftools --gzvcf EAS.vcf.gz --hardy --out EAS_post
+vcftools --gzvcf OCE.vcf.gz --hardy --out OCE_post
+vcftools --gzvcf MDE.vcf.gz --hardy --out MDE_post
 
+vcftools --gzvcf $isec --missing-indv --out pooled_post
+vcftools --gzvcf $HGDP6 --missing-indv --out HGDP_pre
+vcftools --gzvcf $GP1000_6 --missing-indv --out 1000GP_pre
+vcftools --gzvcf $TCGA5 --missing-indv --out TCGA_pre
+vcftools --gzvcf $ORIEN5 --missing-indv --out ORIEN_pre
+vcftools --gzvcf HGDP_post.vcf.gz --missing-indv --out HGDP_post
+vcftools --gzvcf ORIEN_post.vcf.gz --missing-indv --out ORIEN_post
+vcftools --gzvcf 1000GP_post.vcf.gz --missing-indv --out 1000GP_post
+vcftools --gzvcf TCGA_post.vcf.gz --missing-indv --out TCGA_post
+vcftools --gzvcf AFR.vcf.gz --missing-indv --out AFR_post
+vcftools --gzvcf EUR.vcf.gz --missing-indv --out EUR_post
+vcftools --gzvcf AMR.vcf.gz --missing-indv --out AMR_post
+vcftools --gzvcf SAS.vcf.gz --missing-indv --out SAS_post
+vcftools --gzvcf EAS.vcf.gz --missing-indv --out EAS_post
+vcftools --gzvcf OCE.vcf.gz --missing-indv --out OCE_post
+vcftools --gzvcf MDE.vcf.gz --missing-indv --out MDE_post
 
-vcftools --gzvcf $merge4 --missing-indv --out pooled_postmerge
-vcftools --gzvcf $HGDP5 --missing-indv --out HGDP_PREmerge
-vcftools --gzvcf $GP1000_5 --missing-indv --out 1000GP_PREmerge
-vcftools --gzvcf $TCGA5 --missing-indv --out TCGA_PREmerge
-vcftools --gzvcf $ORIEN5 --missing-indv --out ORIEN_PREmerge
-vcftools --gzvcf HGDP_postmerge.vcf.gz --missing-indv --out HGDP_postmerge
-vcftools --gzvcf ORIEN_postmerge.vcf.gz --missing-indv --out ORIEN_postmerge
-vcftools --gzvcf 1000GP_postmerge.vcf.gz --missing-indv --out 1000GP_postmerge
-vcftools --gzvcf TCGA_postmerge.vcf.gz --missing-indv --out TCGA_postmerge
-vcftools --gzvcf AFR.vcf.gz --missing-indv --out AFR_postmerge
-vcftools --gzvcf EUR.vcf.gz --missing-indv --out EUR_postmerge
-vcftools --gzvcf AMR.vcf.gz --missing-indv --out AMR_postmerge
-vcftools --gzvcf SAS.vcf.gz --missing-indv --out SAS_postmerge
-vcftools --gzvcf EAS.vcf.gz --missing-indv --out EAS_postmerge
-vcftools --gzvcf OCE.vcf.gz --missing-indv --out OCE_postmerge
-vcftools --gzvcf MDE.vcf.gz --missing-indv --out MDE_postmerge
+vcftools --gzvcf $isec --missing-site --out pooled_post
+vcftools --gzvcf $HGDP6 --missing-site --out HGDP_pre
+vcftools --gzvcf $GP1000_6 --missing-site --out 1000GP_pre
+vcftools --gzvcf $TCGA5 --missing-site --out TCGA_pre
+vcftools --gzvcf $ORIEN5 --missing-site --out ORIEN_pre
+vcftools --gzvcf HGDP_post.vcf.gz --missing-site --out HGDP_post
+vcftools --gzvcf ORIEN_post.vcf.gz --missing-site --out ORIEN_post
+vcftools --gzvcf 1000GP_post.vcf.gz --missing-site --out 1000GP_post
+vcftools --gzvcf TCGA_post.vcf.gz --missing-site --out TCGA_post
+vcftools --gzvcf AFR.vcf.gz --missing-site --out AFR_post
+vcftools --gzvcf EUR.vcf.gz --missing-site --out EUR_post
+vcftools --gzvcf AMR.vcf.gz --missing-site --out AMR_post
+vcftools --gzvcf SAS.vcf.gz --missing-site --out SAS_post
+vcftools --gzvcf EAS.vcf.gz --missing-site --out EAS_post
+vcftools --gzvcf OCE.vcf.gz --missing-site --out OCE_post
+vcftools --gzvcf MDE.vcf.gz --missing-site --out MDE_post
 
-vcftools --gzvcf $merge4 --missing-site --out pooled_postmerge
-vcftools --gzvcf $HGDP5 --missing-site --out HGDP_PREmerge
-vcftools --gzvcf $GP1000_5 --missing-site --out 1000GP_PREmerge
-vcftools --gzvcf $TCGA5 --missing-site --out TCGA_PREmerge
-vcftools --gzvcf $ORIEN5 --missing-site --out ORIEN_PREmerge
-vcftools --gzvcf HGDP_postmerge.vcf.gz --missing-site --out HGDP_postmerge
-vcftools --gzvcf ORIEN_postmerge.vcf.gz --missing-site --out ORIEN_postmerge
-vcftools --gzvcf 1000GP_postmerge.vcf.gz --missing-site --out 1000GP_postmerge
-vcftools --gzvcf TCGA_postmerge.vcf.gz --missing-site --out TCGA_postmerge
-vcftools --gzvcf AFR.vcf.gz --missing-site --out AFR_postmerge
-vcftools --gzvcf EUR.vcf.gz --missing-site --out EUR_postmerge
-vcftools --gzvcf AMR.vcf.gz --missing-site --out AMR_postmerge
-vcftools --gzvcf SAS.vcf.gz --missing-site --out SAS_postmerge
-vcftools --gzvcf EAS.vcf.gz --missing-site --out EAS_postmerge
-vcftools --gzvcf OCE.vcf.gz --missing-site --out OCE_postmerge
-vcftools --gzvcf MDE.vcf.gz --missing-site --out MDE_postmerge
+vcftools --gzvcf $isec --freq --out pooled_post
+vcftools --gzvcf $HGDP6 --freq --out HGDP_pre
+vcftools --gzvcf $GP1000_6 --freq --out 1000GP_pre
+vcftools --gzvcf $TCGA5 --freq --out TCGA_pre
+vcftools --gzvcf $ORIEN5 --freq --out ORIEN_pre
+vcftools --gzvcf HGDP_post.vcf.gz --freq --out HGDP_post
+vcftools --gzvcf ORIEN_post.vcf.gz --freq --out ORIEN_post
+vcftools --gzvcf 1000GP_post.vcf.gz --freq --out 1000GP_post
+vcftools --gzvcf TCGA_post.vcf.gz --freq --out TCGA_post
+vcftools --gzvcf AFR.vcf.gz --freq --out AFR_post
+vcftools --gzvcf EUR.vcf.gz --freq --out EUR_post
+vcftools --gzvcf AMR.vcf.gz --freq --out AMR_post
+vcftools --gzvcf SAS.vcf.gz --freq --out SAS_post
+vcftools --gzvcf EAS.vcf.gz --freq --out EAS_post
+vcftools --gzvcf OCE.vcf.gz --freq --out OCE_post
+vcftools --gzvcf MDE.vcf.gz --freq --out MDE_post
 
-vcftools --gzvcf $merge4 --freq --out pooled_postmerge
-vcftools --gzvcf $HGDP5 --freq --out HGDP_PREmerge
-vcftools --gzvcf $GP1000_5 --freq --out 1000GP_PREmerge
-vcftools --gzvcf $TCGA5 --freq --out TCGA_PREmerge
-vcftools --gzvcf $ORIEN5 --freq --out ORIEN_PREmerge
-vcftools --gzvcf HGDP_postmerge.vcf.gz --freq --out HGDP_postmerge
-vcftools --gzvcf ORIEN_postmerge.vcf.gz --freq --out ORIEN_postmerge
-vcftools --gzvcf 1000GP_postmerge.vcf.gz --freq --out 1000GP_postmerge
-vcftools --gzvcf TCGA_postmerge.vcf.gz --freq --out TCGA_postmerge
-vcftools --gzvcf AFR.vcf.gz --freq --out AFR_postmerge
-vcftools --gzvcf EUR.vcf.gz --freq --out EUR_postmerge
-vcftools --gzvcf AMR.vcf.gz --freq --out AMR_postmerge
-vcftools --gzvcf SAS.vcf.gz --freq --out SAS_postmerge
-vcftools --gzvcf EAS.vcf.gz --freq --out EAS_postmerge
-vcftools --gzvcf OCE.vcf.gz --freq --out OCE_postmerge
-vcftools --gzvcf MDE.vcf.gz --freq --out MDE_postmerge
+vcftools --gzvcf $isec --depth --out pooled_post
+vcftools --gzvcf $HGDP6 --depth --out HGDP_pre
+vcftools --gzvcf $GP1000_6 --depth --out 1000GP_pre
+vcftools --gzvcf $TCGA5 --depth --out TCGA_pre
+vcftools --gzvcf $ORIEN5 --depth --out ORIEN_pre
+vcftools --gzvcf HGDP_post.vcf.gz --depth --out HGDP_post
+vcftools --gzvcf ORIEN_post.vcf.gz --depth --out ORIEN_post
+vcftools --gzvcf 1000GP_post.vcf.gz --depth --out 1000GP_post
+vcftools --gzvcf TCGA_post.vcf.gz --depth --out TCGA_post
+vcftools --gzvcf AFR.vcf.gz --depth --out AFR_post
+vcftools --gzvcf EUR.vcf.gz --depth --out EUR_post
+vcftools --gzvcf AMR.vcf.gz --depth --out AMR_post
+vcftools --gzvcf SAS.vcf.gz --depth --out SAS_post
+vcftools --gzvcf EAS.vcf.gz --depth --out EAS_post
+vcftools --gzvcf OCE.vcf.gz --depth --out OCE_post
+vcftools --gzvcf MDE.vcf.gz --depth --out MDE_post
 
-vcftools --gzvcf $merge4 --depth --out pooled_postmerge
-vcftools --gzvcf $HGDP5 --depth --out HGDP_PREmerge
-vcftools --gzvcf $GP1000_5 --depth --out 1000GP_PREmerge
-vcftools --gzvcf $TCGA5 --depth --out TCGA_PREmerge
-vcftools --gzvcf $ORIEN5 --depth --out ORIEN_PREmerge
-vcftools --gzvcf HGDP_postmerge.vcf.gz --depth --out HGDP_postmerge
-vcftools --gzvcf ORIEN_postmerge.vcf.gz --depth --out ORIEN_postmerge
-vcftools --gzvcf 1000GP_postmerge.vcf.gz --depth --out 1000GP_postmerge
-vcftools --gzvcf TCGA_postmerge.vcf.gz --depth --out TCGA_postmerge
-vcftools --gzvcf AFR.vcf.gz --depth --out AFR_postmerge
-vcftools --gzvcf EUR.vcf.gz --depth --out EUR_postmerge
-vcftools --gzvcf AMR.vcf.gz --depth --out AMR_postmerge
-vcftools --gzvcf SAS.vcf.gz --depth --out SAS_postmerge
-vcftools --gzvcf EAS.vcf.gz --depth --out EAS_postmerge
-vcftools --gzvcf OCE.vcf.gz --depth --out OCE_postmerge
-vcftools --gzvcf MDE.vcf.gz --depth --out MDE_postmerge
+vcftools --gzvcf $isec --site-depth --out pooled_post
+vcftools --gzvcf $HGDP6 --site-depth --out HGDP_pre
+vcftools --gzvcf $GP1000_6 --site-depth --out 1000GP_pre
+vcftools --gzvcf $TCGA5 --site-depth --out TCGA_pre
+vcftools --gzvcf $ORIEN5 --site-depth --out ORIEN_pre
+vcftools --gzvcf HGDP_post.vcf.gz --site-depth --out HGDP_post
+vcftools --gzvcf ORIEN_post.vcf.gz --site-depth --out ORIEN_post
+vcftools --gzvcf 1000GP_post.vcf.gz --site-depth --out 1000GP_post
+vcftools --gzvcf TCGA_post.vcf.gz --site-depth --out TCGA_post
+vcftools --gzvcf AFR.vcf.gz --depth --site-depth AFR_post
+vcftools --gzvcf EUR.vcf.gz --depth --site-depth EUR_post
+vcftools --gzvcf AMR.vcf.gz --depth --site-depth AMR_post
+vcftools --gzvcf SAS.vcf.gz --depth --site-depth SAS_post
+vcftools --gzvcf EAS.vcf.gz --depth --site-depth EAS_post
+vcftools --gzvcf OCE.vcf.gz --depth --site-depth OCE_post
+vcftools --gzvcf MDE.vcf.gz --depth --site-depth MDE_post
 
-vcftools --gzvcf $merge4 --site-depth --out pooled_postmerge
-vcftools --gzvcf $HGDP5 --site-depth --out HGDP_PREmerge
-vcftools --gzvcf $GP1000_5 --site-depth --out 1000GP_PREmerge
-vcftools --gzvcf $TCGA5 --site-depth --out TCGA_PREmerge
-vcftools --gzvcf $ORIEN5 --site-depth --out ORIEN_PREmerge
-vcftools --gzvcf HGDP_postmerge.vcf.gz --site-depth --out HGDP_postmerge
-vcftools --gzvcf ORIEN_postmerge.vcf.gz --site-depth --out ORIEN_postmerge
-vcftools --gzvcf 1000GP_postmerge.vcf.gz --site-depth --out 1000GP_postmerge
-vcftools --gzvcf TCGA_postmerge.vcf.gz --site-depth --out TCGA_postmerge
-vcftools --gzvcf AFR.vcf.gz --depth --site-depth AFR_postmerge
-vcftools --gzvcf EUR.vcf.gz --depth --site-depth EUR_postmerge
-vcftools --gzvcf AMR.vcf.gz --depth --site-depth AMR_postmerge
-vcftools --gzvcf SAS.vcf.gz --depth --site-depth SAS_postmerge
-vcftools --gzvcf EAS.vcf.gz --depth --site-depth EAS_postmerge
-vcftools --gzvcf OCE.vcf.gz --depth --site-depth OCE_postmerge
-vcftools --gzvcf MDE.vcf.gz --depth --site-depth MDE_postmerge
-
-vcftools --gzvcf $merge4 --hap-r2 --out pooled_postmerge
-vcftools --gzvcf $HGDP5 --hap-r2 --out HGDP_PREmerge
-vcftools --gzvcf $GP1000_5 --hap-r2 --out 1000GP_PREmerge
-vcftools --gzvcf $TCGA5 --hap-r2 --out TCGA_PREmerge
-vcftools --gzvcf $ORIEN5 --hap-r2 --out ORIEN_PREmerge
-vcftools --gzvcf HGDP_postmerge.vcf.gz --hap-r2 --out HGDP_postmerge
-vcftools --gzvcf ORIEN_postmerge.vcf.gz --hap-r2 --out ORIEN_postmerge
-vcftools --gzvcf 1000GP_postmerge.vcf.gz --hap-r2 --out 1000GP_postmerge
-vcftools --gzvcf TCGA_postmerge.vcf.gz --hap-r2 --out TCGA_postmerge
-vcftools --gzvcf AFR.vcf.gz --hap-r2 --out AFR_postmerge
-vcftools --gzvcf EUR.vcf.gz --hap-r2 --out EUR_postmerge
-vcftools --gzvcf AMR.vcf.gz --hap-r2 --out AMR_postmerge
-vcftools --gzvcf SAS.vcf.gz --hap-r2 --out SAS_postmerge
-vcftools --gzvcf EAS.vcf.gz --hap-r2 --out EAS_postmerge
-vcftools --gzvcf OCE.vcf.gz --hap-r2 --out OCE_postmerge
-vcftools --gzvcf MDE.vcf.gz --hap-r2 --out MDE_postmerge
+vcftools --gzvcf $isec --hap-r2 --out pooled_post
+vcftools --gzvcf $HGDP6 --hap-r2 --out HGDP_pre
+vcftools --gzvcf $GP1000_6 --hap-r2 --out 1000GP_pre
+vcftools --gzvcf $TCGA5 --hap-r2 --out TCGA_pre
+vcftools --gzvcf $ORIEN5 --hap-r2 --out ORIEN_pre
+vcftools --gzvcf HGDP_post.vcf.gz --hap-r2 --out HGDP_post
+vcftools --gzvcf ORIEN_post.vcf.gz --hap-r2 --out ORIEN_post
+vcftools --gzvcf 1000GP_post.vcf.gz --hap-r2 --out 1000GP_post
+vcftools --gzvcf TCGA_post.vcf.gz --hap-r2 --out TCGA_post
+vcftools --gzvcf AFR.vcf.gz --hap-r2 --out AFR_post
+vcftools --gzvcf EUR.vcf.gz --hap-r2 --out EUR_post
+vcftools --gzvcf AMR.vcf.gz --hap-r2 --out AMR_post
+vcftools --gzvcf SAS.vcf.gz --hap-r2 --out SAS_post
+vcftools --gzvcf EAS.vcf.gz --hap-r2 --out EAS_post
+vcftools --gzvcf OCE.vcf.gz --hap-r2 --out OCE_post
+vcftools --gzvcf MDE.vcf.gz --hap-r2 --out MDE_post
                                                                                                                                                                                         
 #-----
 #Fst
@@ -494,6 +498,6 @@ vcftools --gzvcf HGDP_1000GP.vcf.gz --weir-fst-pop AFR.txt --weir-fst-pop AMR.tx
 #QC: transition/transversion ratio
 bcftools stats $ORIEN5 | grep "TSTV"
 bcftools stats $TCGA5 | grep "TSTV"
-bcftools stats $HGDP5 | grep "TSTV"
-bcftools stats $GP10005 | grep "TSTV"
-bcftools stats $merge4 | grep "TSTV"
+bcftools stats $HGDP6 | grep "TSTV"
+bcftools stats $GP1000_6 | grep "TSTV"
+bcftools stats $isec | grep "TSTV"
