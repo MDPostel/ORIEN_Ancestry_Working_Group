@@ -54,13 +54,30 @@ $gatk --java-options "-Xmx${mem}g" HaplotypeCaller \
 tabix -f ${name}_TCGA.g.vcf.gz
     done
     
+#---------------------------
+#Combining GVCFs -- exons
+
+module load openjdk
+picardjar=$(echo "/project/davidwcr_264/Packages/picard-tools/picard-2.9.0/picard.jar")
+input_bed=$(echo "/project/davidwcr_392/ORIEN_Project/Resources/hg38_IDT_targets_sorted_merged_extended_sorted_merged.bed")
+#TCGA_ref=$(echo "/project/davidwcr_264/Resources/references/Homo_sapiens/GRCh38/fasta/GRCh38.primary_assembly.genome.fa")
+#cat $TCGA_ref | grep -v "KI" | grep -v "GL" | grep -v "chrUn" | grep -v "random" | grep -v HLA | grep -v alt | grep -v chrEBV | grep -v chrM > /project/davidwcr_264/Resources/references/Homo_sapiens/GRCh38/fasta/GRCh38.primary_assembly.genome_fix.fa
+ref=$(echo /project/davidwcr_264/Resources/references/Homo_sapiens/GRCh38/fasta/GRCh38.primary_assembly.genome_fix.fa)
+dic=$(echo "/project/davidwcr_392/ORIEN_Project/Resources/hs38DH.dict")
+java -jar $picardjar BedToIntervalList \
+      I=$input_bed \
+      O=ORIEN.interval_list \
+      SD=$dict
+grep -v "chrUn" ORIEN.interval_list | grep -v "_random" | grep -v "alt" | grep -v "HLA" | grep -v chrX | grep -v chrY | grep -v chrM | grep -v chrEBV > ORIEN_autosomes.interval_list
+intervals=$(echo "/scratch/mpostel/ORIEN_autosomes.interval_list")
+
 echo "Combining g.VCFs"
 $gatk --java-options "-Xmx${mem}g" CombineGVCFs  \
    -R $ref  \
    --tmp-dir /project/davidwcr_666/TCGA/WES \
-   --variant {g.vcf.gz} \
-#LIST ALL SAMPLES AS ABOVE, ONE PER LINE
-   -O TCGA_CombineGVCFs_${date}.g.vcf.gz 
+   --variant {g.vcf.gz} \ #list all of them
+   -O TCGA_CombineGVCFs_${date}.g.vcf.gz \
+   -L $intervals
 tabix -f TCGA_CombineGVCFs_${date}.g.vcf.gz
 
 #---------------------------
