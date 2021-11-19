@@ -91,19 +91,19 @@ name=$(echo $file | cut -d"." -f1)
 $gatk --java-options "-Xmx${mem}g" GenotypeGVCFs \
    -R $ref \
    -V gendb:///project/davidwcr_666/TCGA/WES/my_GenomicsDBImport \
-   -O ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz \
+   -O ${name}_GATKGenotypeGVCFs.vcf.gz \
    --verbosity ERROR \
    -G StandardAnnotation -newQual \
    -G AS_StandardAnnotation -newQual 
    
 #   --allow-old-rms-mapping-quality-annotation-data
 
-tabix -f ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz
+tabix -f ${name}_GATKGenotypeGVCFs.vcf.gz
 
 #---------------------------
 #SUBSET BY EXOME BED AND DBSNP VCF; FILTER FOR DP>20
 
-file=$(echo /project/davidwcr_666/TCGA/WES/TCGA_CombineGVCFs_${date}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz)
+file=$(echo /project/davidwcr_666/TCGA/WES/TCGA_CombineGVCFs_${date}_GATKGenotypeGVCFs.vcf.gz)
 name=$(echo $file | cut -d"/" -f9 | cut -d"." -f1)
 cd isec
 bcftools isec -R $bed -p ./ $file $dbSNP --threads $t
@@ -119,10 +119,10 @@ tabix -f ${name}_subsetbed_dbSNPisec_DPgt20.vcf.gz
 #SORT
 
 cd /project/davidwcr_666/TCGA/WES
-file=$(echo "/project/davidwcr_666/TCGA/WES/isec/TCGA_CombineGVCFs_${date}_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_DPgt20.vcf.gz")
+file=$(echo "/project/davidwcr_666/TCGA/WES/isec/TCGA_CombineGVCFs_${date}_GATKGenotypeGVCFs_subsetbed_dbSNPisec_DPgt20.vcf.gz")
 
-bcftools sort -m ${mem}G -T ./ $file -Oz -o TCGA_CombineGVCFs_${date}_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_DPgt20_sorted.vcf.gz #--threads $t
-tabix -f TCGA_CombineGVCFs_${date}_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_DPgt20_sorted.vcf.gz
+bcftools sort -m ${mem}G -T ./ $file -Oz -o TCGA_CombineGVCFs_${date}_GATKGenotypeGVCFs_subsetbed_dbSNPisec_DPgt20_sorted.vcf.gz #--threads $t
+tabix -f TCGA_CombineGVCFs_${date}_GATKGenotypeGVCFs_subsetbed_dbSNPisec_DPgt20_sorted.vcf.gz
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
