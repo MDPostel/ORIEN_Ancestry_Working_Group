@@ -78,22 +78,26 @@ interval_list=$(echo /scratch/mpostel/ORIEN_autosomes.interval_list)
     --tmp-dir /project/davidwcr_666/TCGA/WES \
     --intervals $interval_list \
     -V #list each individual TCGA gVCF on separate lines prefaced by "-V" and followed by "\" (n=11,244)
-
+    --reader-threads 600
+    
 #---------------------------
-#GVCF <REF> BLOCKS to VCF FORMAT
+#JOINT-CALLING; GENOTYPE MERGED GVCF
 
 file=$(echo TCGA_CombineGVCFs_${date}.g.vcf.gz)
 echo "Genotyping merged g.VCF $file"
 name=$(echo $file | cut -d"." -f1)
+
 $gatk --java-options "-Xmx${mem}g" GenotypeGVCFs \
    -R $ref \
-   -V $file \
+   -V gendb:///project/davidwcr_666/TCGA/WES/my_GenomicsDBImport \
    -O ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz \
    --verbosity ERROR \
-   --allow-old-rms-mapping-quality-annotation-data
+   -G StandardAnnotation -newQual \
+   -G AS_StandardAnnotation -newQual 
+   
+#   --allow-old-rms-mapping-quality-annotation-data
 
 tabix -f ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz
-
 
 #---------------------------
 #SUBSET BY EXOME BED AND DBSNP VCF; FILTER FOR DP>20
