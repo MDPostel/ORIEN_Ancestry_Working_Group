@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 #SBATCH --partition=oneweek
-#SBATCH --mem=200G
+#SBATCH --mem=1000G
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-user=mpostel@usc.edu
 #SBATCH --mail-type=FAIL
@@ -18,7 +18,7 @@ bed=$(echo "/project/davidwcr_392/ORIEN_Project/Resources/hg38_IDT_targets_sorte
 dbSNP=$(echo "/project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/dbSNP_file/00-All_chr.vcf.gz")
 gatk=$(echo "/home1/mpostel/bin/gatk/gatk")
 
-mem=$(echo "199") #memory
+mem=$(echo "990") #memory
 t=$(echo "4000") #threads
 ulimit -n 4001 #files open
 date=$(echo Oct2021)
@@ -75,8 +75,8 @@ echo "Combining g.VCFs"
 mkdir my_database
 interval_list=$(echo /scratch/mpostel/ORIEN_autosomes.interval_list)
 /home1/mpostel/bin/gatk/gatk --java-options "-Xmx${mem}g -Xms${mem}g" GenomicsDBImport \
-    --genomicsdb-workspace-path my_database \
-    --tmp-dir /scratch/mpostel \
+    --genomicsdb-workspace-path /project/davidwcr_666/TCGA/WES/my_GenomicsDBImport \
+    --tmp-dir /project/davidwcr_666/TCGA/WES \
     --intervals $interval_list \
     -V #list each individual TCGA gVCF on separate lines prefaced by "-V" and followed by "\" (n=11,244)
 
