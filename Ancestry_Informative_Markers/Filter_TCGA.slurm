@@ -78,7 +78,8 @@ interval_list=$(echo /scratch/mpostel/ORIEN_autosomes.interval_list)
     --tmp-dir /project/davidwcr_666/TCGA/WES \
     --intervals $interval_list \
     -V #list each individual TCGA gVCF on separate lines prefaced by "-V" and followed by "\" (n=11,244)
-    --reader-threads 600
+    --reader-threads 600 \
+    --batch-size 250
     
 #---------------------------
 #JOINT-CALLING; GENOTYPE MERGED GVCF
