@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-#SBATCH --partition=oneweek
+#SBATCH --partition=largemem
 #SBATCH --mem=1000G
 #SBATCH --time=7-00:00:00
 #SBATCH --mail-user=mpostel@usc.edu
