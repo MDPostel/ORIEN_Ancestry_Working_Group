@@ -72,7 +72,6 @@ grep -v "chrUn" ORIEN.interval_list | grep -v "_random" | grep -v "alt" | grep -
 intervals=$(echo "/scratch/mpostel/ORIEN_autosomes.interval_list")
 
 echo "Combining g.VCFs"
-mkdir my_database
 interval_list=$(echo /scratch/mpostel/ORIEN_autosomes.interval_list)
 /home1/mpostel/bin/gatk/gatk --java-options "-Xmx${mem}g -Xms${mem}g" GenomicsDBImport \
     --genomicsdb-workspace-path /project/davidwcr_666/TCGA/WES/my_GenomicsDBImport \
