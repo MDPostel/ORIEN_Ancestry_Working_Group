@@ -72,13 +72,13 @@ grep -v "chrUn" ORIEN.interval_list | grep -v "_random" | grep -v "alt" | grep -
 intervals=$(echo "/scratch/mpostel/ORIEN_autosomes.interval_list")
 
 echo "Combining g.VCFs"
-$gatk --java-options "-Xmx${mem}g" CombineGVCFs  \
-   -R $ref  \
-   --tmp-dir /project/davidwcr_666/TCGA/WES \
-   --variant {g.vcf.gz} \ #list all of them
-   -O TCGA_CombineGVCFs_${date}.g.vcf.gz \
-   -L $intervals
-tabix -f TCGA_CombineGVCFs_${date}.g.vcf.gz
+mkdir my_database
+interval_list=$(echo /scratch/mpostel/ORIEN_autosomes.interval_list)
+/home1/mpostel/bin/gatk/gatk --java-options "-Xmx${mem}g -Xms${mem}g" GenomicsDBImport \
+    --genomicsdb-workspace-path my_database \
+    --tmp-dir /scratch/mpostel \
+    --intervals $interval_list \
+    -V #list each individual TCGA gVCF on separate lines prefaced by "-V" and followed by "\" (n=11,244)
 
 #---------------------------
 #GVCF <REF> BLOCKS to VCF FORMAT
