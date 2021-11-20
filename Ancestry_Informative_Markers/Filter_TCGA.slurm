@@ -77,6 +77,8 @@ interval_list=$(echo /scratch/mpostel/ORIEN_autosomes.interval_list)
     --genomicsdb-workspace-path /project/davidwcr_666/TCGA/WES/my_GenomicsDBImport \
     --tmp-dir /project/davidwcr_666/TCGA/WES \
     --intervals $interval_list \
+    --intervals chr1 #do for chr 1-22 separately    
+    --interval-set-rule INTERSECTION \
     -V #list each individual TCGA gVCF on separate lines prefaced by "-V" and followed by "\" (n=11,244)
     --reader-threads 600 \
     --batch-size 500
