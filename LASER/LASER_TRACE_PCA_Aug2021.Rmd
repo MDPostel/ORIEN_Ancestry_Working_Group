@@ -1,0 +1,4368 @@
+---
+title: "USC ORIEN + TCGA + HGDP + 1000GP Global Ancestry via LASER TRACE - Aug 2021"
+output: html_notebook
+---
+
+Set up
+```{r}
+
+library(plotly)
+library(dbplyr)
+library(plyr)
+library(stringi)
+#work_dir <- "/Users/mpostel/Desktop"
+#setwd(work_dir)
+
+sample_coord1 <- read.table(file = 'results.1-1250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord2 <- read.table(file = 'results.1251-2500.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord3 <- read.table(file = 'results.2501-3750.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord4 <- read.table(file = 'results.3751-5000.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord5 <- read.table(file = 'results.5001-6250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord6 <- read.table(file = 'results.6251-7500.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord7 <- read.table(file = 'results.7501-8750.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord8 <- read.table(file = 'results.8751-10000.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord9 <- read.table(file = 'results.10001-11250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord10 <- read.table(file = 'results.11251-12500.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord11 <- read.table(file = 'results.12501-13750.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord12 <- read.table(file = 'results.13751-15000.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord13 <- read.table(file = 'results.15001-16250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord14 <- read.table(file = 'results.16251-17500.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord15 <- read.table(file = 'results.17501-18750.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord16 <- read.table(file = 'results.18751-20000.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord17 <- read.table(file = 'results.20001-21250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord18 <- read.table(file = 'results.21251-21608.ProPC.coord', sep = '\t', header = TRUE)
+
+sample_coord <- rbind(sample_coord1,sample_coord2,sample_coord3,sample_coord4,sample_coord5,sample_coord6,sample_coord7,sample_coord8,sample_coord9,sample_coord10,sample_coord11,sample_coord12,sample_coord13,sample_coord14,sample_coord15,sample_coord16,sample_coord17,sample_coord18)
+ORIEN_TCGA_coord <- sample_coord[,c(1,2,7:12)]
+
+
+ORIEN_r_e <- read.csv(file = '20PRJ071USC_20210928_PatientMaster_V4.csv', sep = ',', header = TRUE)
+names(ORIEN_r_e)[names(ORIEN_r_e) == "Avatar.Patient.ID" ] <- "ID"
+
+linkage <- read.csv(file = '20PRJ071USC_20210928_ClinicalMolLinkage_V4_germlineonly.csv', sep = ',', header = TRUE)
+ORIEN_IDs <- linkage[,c(3,1)]
+
+names(ORIEN_IDs)[names(ORIEN_IDs) == "ORIENAvatarKey" ] <- "AvatarKey"
+
+#ORIEN_IDs[duplicated(ORIEN_IDs$AvatarID),]
+#SAMPLES W/ >1 GERMLINE WES FROM ORIEN
+#A000032: SL203182, SL380373
+#A000059: A44821,	SL213765
+#A007373:	A56902,	SL333084
+#A000572:	SL386916,	SL239772
+#A016630:	A62184,	SL333103
+#A015835:	SL327400,	A56865
+
+ORIEN <- merge(x = ORIEN_r_e, y = ORIEN_IDs, by = "AvatarKey")
+ORIEN2 <- ORIEN[,c(7,1,5,6)]
+
+
+#add ID and ethnicity headers in vi etc.
+TCGA_r_e <- read.csv(file = 'TCGA_race_ethnicity.csv', sep=',', header = TRUE)
+TCGA_r_e <- TCGA_r_e[,c(1:3)]
+colnames(TCGA_r_e)[1] <-"WES" 
+
+ORIEN_TCGA <- rbind.fill(ORIEN2,TCGA_r_e)
+ORIEN_TCGA_ethnicity <- ORIEN_TCGA[,c(1,4)]
+ORIEN_TCGA_race <- ORIEN_TCGA[,c(1,3)]
+
+colnames(ORIEN_TCGA_ethnicity)[2] <-"popID"
+colnames(ORIEN_TCGA_race)[2] <-"popID"
+
+#Reference datasets:
+HGDP_1000GP <- read.table(file = 'laser.RefPC.coord', sep = '\t', header = TRUE)
+HGDP_1000GP <- HGDP_1000GP[,c(2:8)]
+names(HGDP_1000GP)[names(HGDP_1000GP) == "indivID" ] <- "Sample.name"
+references <- read.table(file = 'igsr_samples.tsv', sep = '\t', header = TRUE)
+names(references)[names(references) == "Superpopulation.name" ] <- "popID"
+references <- references[,c(1,7)]
+HGDP_1000GP_all2 <- merge(x=HGDP_1000GP,y=references,by="Sample.name")
+
+names(ORIEN_TCGA_coord)[names(ORIEN_TCGA_coord) == "indivID" ] <- "WES"
+ORIEN_TCGA_coord <- ORIEN_TCGA_coord[,c(2:8)]
+
+ORIEN_TCGA_all_e <- merge(x=ORIEN_TCGA_coord, y=ORIEN_TCGA_ethnicity, by="WES")
+ORIEN_TCGA_all_r <- merge(x=ORIEN_TCGA_coord, y=ORIEN_TCGA_race, by="WES")
+ORIEN_TCGA_all2_e <- ORIEN_TCGA_all_e[,c(1,8,2:7)]
+ORIEN_TCGA_all2_r <- ORIEN_TCGA_all_r[,c(1,8,2:7)]
+names(ORIEN_TCGA_all2_e)[names(ORIEN_TCGA_all2_e) == "Ethnicity" ] <- "popID"
+names(ORIEN_TCGA_all2_r)[names(ORIEN_TCGA_all2_r) == "Race" ] <- "popID"
+
+names(ORIEN_TCGA_all2_e)[names(ORIEN_TCGA_all2_e) == "WES" ] <- "Sample.name"
+names(ORIEN_TCGA_all2_r)[names(ORIEN_TCGA_all2_r) == "WES" ] <- "Sample.name"
+samples_ref_coord_e <- rbind(ORIEN_TCGA_all2_e,HGDP_1000GP_all2)
+samples_ref_coord_r <- rbind(ORIEN_TCGA_all2_r,HGDP_1000GP_all2)
+
+European <- subset(HGDP_1000GP_all2, popID == "European Ancestry")
+European_West_Eurasia_SGDP <- subset(HGDP_1000GP_all2, popID == "European Ancestry,West Eurasia (SGDP)")
+East_Asian <- subset(HGDP_1000GP_all2, popID == "East Asian Ancestry")
+American <- subset(HGDP_1000GP_all2, popID == "American Ancestry")
+South_Asian <- subset(HGDP_1000GP_all2, popID == "South Asian Ancestry")
+African <- subset(HGDP_1000GP_all2, popID == "African Ancestry")
+South_Asian_SGDP <- subset(HGDP_1000GP_all2, popID == "South Asia (SGDP),South Asian Ancestry")
+African_SGDP <- subset(HGDP_1000GP_all2, popID == "African Ancestry,Africa (SGDP)")
+East_Asian_SGDP <- subset(HGDP_1000GP_all2, popID == "East Asia (SGDP),East Asian Ancestry")
+Central_South_Asia <- subset(HGDP_1000GP_all2, popID == "Central South Asia (HGDP)")
+Africa_HGDP <- subset(HGDP_1000GP_all2, popID == "Africa (HGDP)")
+Oceania_HGDP_SGDP <- subset(HGDP_1000GP_all2, popID == "Oceania (SGDP),Oceania (HGDP)")
+Middle_East_HGDP <- subset(HGDP_1000GP_all2, popID == "Middle East (HGDP)")
+Europe_HGDP <- subset(HGDP_1000GP_all2, popID == "Europe (HGDP)")
+East_Asian_HGDP <- subset(HGDP_1000GP_all2, popID == "East Asia (HGDP)")
+Oceania_HGDP <- subset(HGDP_1000GP_all2, popID == "Oceania (HGDP)")
+America_HGDP <- subset(HGDP_1000GP_all2, popID == "America (HGDP)")
+Central_Asia_and_Siberia_SGDP <- subset(HGDP_1000GP_all2, popID == "Central Asia and Siberia (SGDP)")
+East_Asian_SGDP2 <- subset(HGDP_1000GP_all2, popID == "East Asia (SGDP)")
+Middle_East_HGDP_Africa_SGDP <- subset(HGDP_1000GP_all2, popID == "Middle East (HGDP),Africa (SGDP)")
+West_Eurasia <- subset(HGDP_1000GP_all2, popID == "West Eurasia (SGDP)")
+African_SGDP2 <- subset(HGDP_1000GP_all2, popID == "Africa (SGDP)")
+Oceania_SGDP <- subset(HGDP_1000GP_all2, popID == "Oceania (SGDP)")
+America_SGDP <- subset(HGDP_1000GP_all2, popID == "America (SGDP)")
+South_Asia_SGDP2 <- subset(HGDP_1000GP_all2, popID == "South Asia (SGDP),Central South Asia (HGDP)")
+South_Asia_SGDP_Central_South_Asia_HGDP <- subset(HGDP_1000GP_all2, popID == "South Asia (SGDP),Central South Asia (HGDP)")
+America_SGDP_HGDP <- subset(HGDP_1000GP_all2, popID == "America (SGDP),America (HGDP)")
+East_Asian_SGDP_HGDP <- subset(HGDP_1000GP_all2, popID == "East Asia (SGDP),East Asia (HGDP)")
+African_SGDP_HGDP <- subset(HGDP_1000GP_all2, popID == "Africa (SGDP),Africa (HGDP)")
+
+EUR <- rbind.fill(European, European_West_Eurasia_SGDP, Europe_HGDP)
+AFR <- rbind.fill(Africa_HGDP, African, African_SGDP, African_SGDP_HGDP, African_SGDP2)
+AMR <- rbind.fill(America_HGDP, America_SGDP, America_SGDP_HGDP, American)
+SAS <- rbind.fill(South_Asian, South_Asian_SGDP, Central_South_Asia, South_Asia_SGDP2, South_Asia_SGDP_Central_South_Asia_HGDP)
+EAS <- rbind.fill(East_Asian, East_Asian_HGDP, East_Asian_SGDP, East_Asian_SGDP2, East_Asian_SGDP_HGDP)
+OCE <- rbind.fill(Oceania_HGDP, Oceania_HGDP_SGDP, Oceania_SGDP)
+MDE <- rbind.fill(Middle_East_HGDP, Middle_East_HGDP_Africa_SGDP)
+
+#Central_Asia_and_Siberia_SGDP
+#West_Eurasia
+
+#EUR_HGDP <- EUR[grepl("HGDP", EUR$indivID),]
+#EUR_HGDP[EUR_HGDP$popID == "EUR",]$popID = "EUR (HGDP)"
+#EUR_1000GP <- EUR[grep("HG[0-9]|NA[0-9]", EUR$indivID),]
+#EUR_1000GP[EUR_1000GP$popID == "EUR",]$popID = "EUR (1000GP)"
+
+#EAS_HGDP <- EAS[grepl("HGDP", EAS$indivID),]
+#EAS_HGDP[EAS_HGDP$popID == "EAS",]$popID = "EAS (HGDP)"
+#EAS_1000GP <- EAS[grep("HG[0-9]|NA[0-9]", EAS$indivID),]
+#EAS_1000GP[EAS_1000GP$popID == "EAS",]$popID = "EAS (1000GP)"
+
+#AMR_HGDP <- AMR[grepl("HGDP", AMR$indivID),]
+#AMR_HGDP[AMR_HGDP$popID == "AMR",]$popID = "AMR (HGDP)"
+#AMR_1000GP <- AMR[grep("HG[0-9]|NA[0-9]", AMR$indivID),]
+#AMR_1000GP[AMR_1000GP$popID == "AMR",]$popID = "AMR (1000GP)"
+
+#SAS_HGDP <- SAS[grepl("HGDP", SAS$indivID),]
+#SAS_HGDP[SAS_HGDP$popID == "SAS",]$popID = "SAS (HGDP)"
+#SAS_1000GP <- SAS[grep("HG[0-9]|NA[0-9]", SAS$indivID),]
+#SAS_1000GP[SAS_1000GP$popID == "SAS",]$popID = "SAS (1000GP)"
+
+#AFR_HGDP <- AFR[grepl("HGDP", AFR$indivID),]
+#AFR_HGDP[AFR_HGDP$popID == "AFR",]$popID = "AFR (HGDP)"
+#AFR_1000GP <- AFR[grep("HG[0-9]|NA[0-9]", AFR$indivID),]
+#AFR_1000GP[AFR_1000GP$popID == "AFR",]$popID = "AFR (1000GP)"
+
+#Ethnicity
+ORIEN_Cuban <- subset(ORIEN_TCGA_all2_e, popID == "Cuban")
+ORIEN_Mexican <- subset(ORIEN_TCGA_all2_e, popID == "Mexican (includes Chicano)")
+ORIEN_DR <- subset(ORIEN_TCGA_all2_e, popID == "Dominican Republic")
+ORIEN_NHL <- subset(ORIEN_TCGA_all2_e, popID == "Non-Spanish; Non-Hispanic")
+ORIEN_OTH_HL <- subset(ORIEN_TCGA_all2_e, popID =="Other specified Spanish/Hispanic origin (includes European; excludes Dominican Republic)")
+ORIEN_PR <- subset(ORIEN_TCGA_all2_e, popID =="Puerto Rican")
+ORIEN_SCAm <- subset(ORIEN_TCGA_all2_e, popID =="South or Central American (except Brazil)")
+ORIEN_HLsurname <- subset(ORIEN_TCGA_all2_e, popID =="Spanish surname only")
+ORIEN_HLnos <- subset(ORIEN_TCGA_all2_e, popID =="Spanish, NOS; Hispanic, NOS; Latino, NOS")
+ORIEN_EthUK <- subset(ORIEN_TCGA_all2_e, popID =="Unknown/Not Reported")
+ORIEN_EthNA <- subset(ORIEN_TCGA_all2_e, popID =="Unknown/Not Applicable")
+ORIEN_EthEmpty <- subset(ORIEN_TCGA_all2_e, popID =="")
+
+#--------
+ORIEN_EthNR <- rbind.fill(ORIEN_EthUK,ORIEN_EthNA,ORIEN_EthEmpty)
+
+TCGA_HL <- subset(ORIEN_TCGA_all2_e, popID == "Hispanic/Latino")
+TCGA_NHL <- subset(ORIEN_TCGA_all2_e, popID == "Not_Hispanic/Not_Latino")
+TCGA_EthNR <- subset(ORIEN_TCGA_all2_e, popID == "Unknown/Not_Reported")
+
+#Collapse different Hispanic subgroups into one:
+ORIEN_HL <- rbind.fill(ORIEN_Cuban, ORIEN_Mexican, ORIEN_DR, ORIEN_OTH_HL, ORIEN_PR, ORIEN_SCAm, ORIEN_HLsurname, ORIEN_HLnos)
+#ORIEN_NHL and ORIEN_EthNR already defined above
+
+#--------
+#Race
+ORIEN_W <- subset(ORIEN_TCGA_all2_r, popID =="White")
+ORIEN_NAm <- subset(ORIEN_TCGA_all2_r, popID =="American Indian, Aleutian, or Eskimo (includes all indigenous populations of the Western hemisphere)")
+ORIEN_RaUK <- subset(ORIEN_TCGA_all2_r, popID =="Unknown/Not Reported")
+ORIEN_RaNA <- subset(ORIEN_TCGA_all2_r, popID =="Unknown/Not Applicable")
+ORIEN_RaceEmpty <- subset(ORIEN_TCGA_all2_r, popID =="")
+ORIEN_RaNR <- rbind.fill(ORIEN_RaUK, ORIEN_RaNA, ORIEN_RaceEmpty)
+ORIEN_OthRace <- subset(ORIEN_TCGA_all2_r, popID =="Other")
+ORIEN_AfAm <- subset(ORIEN_TCGA_all2_r, popID =="Black")
+ORIEN_Viet <- subset(ORIEN_TCGA_all2_r, popID =="Vietnamese")
+ORIEN_Thai <- subset(ORIEN_TCGA_all2_r, popID =="Thai")
+ORIEN_PacIsl <- subset(ORIEN_TCGA_all2_r, popID =="Pacific Islander, NOS")
+ORIEN_Poly <- subset(ORIEN_TCGA_all2_r, popID =="Polynesian, NOS")
+ORIEN_Asi <- subset(ORIEN_TCGA_all2_r, popID =="Other Asian, including Asian, NOS and Oriental, NOS")
+ORIEN_Laos <- subset(ORIEN_TCGA_all2_r, popID =="Laotian")
+ORIEN_Kor <- subset(ORIEN_TCGA_all2_r, popID =="Korean")
+ORIEN_Camb <- subset(ORIEN_TCGA_all2_r, popID =="Kampuchean (Cambodian)")
+ORIEN_Japa <- subset(ORIEN_TCGA_all2_r, popID =="Japanese")
+ORIEN_Haw <- subset(ORIEN_TCGA_all2_r, popID =="Hawaiian")
+ORIEN_Guam <- subset(ORIEN_TCGA_all2_r, popID =="Guamanian, NOS")
+ORIEN_Fili <- subset(ORIEN_TCGA_all2_r, popID =="Filipino")
+ORIEN_Chin <- subset(ORIEN_TCGA_all2_r, popID =="Chinese")
+ORIEN_IndPak <- subset(ORIEN_TCGA_all2_r, popID =="Asian Indian or Pakistani, NOS")
+ORIEN_Pak <- subset(ORIEN_TCGA_all2_r, popID =="Pakistani")
+ORIEN_AsiaInd <- subset(ORIEN_TCGA_all2_r, popID =="Asian Indian")
+
+#Collapse different subgroups: 
+
+ORIEN_Asia <- rbind.fill(ORIEN_Asi, ORIEN_Viet, ORIEN_Thai, ORIEN_Laos, ORIEN_Kor, ORIEN_Camb, ORIEN_Japa, ORIEN_Fili, ORIEN_Chin, ORIEN_IndPak, ORIEN_Pak, ORIEN_AsiaInd)
+ORIEN_PacIsl <- rbind.fill(ORIEN_PacIsl, ORIEN_Haw, ORIEN_Guam, ORIEN_Poly)
+
+TCGA_NAm <- subset(ORIEN_TCGA_all2_r, popID =="American_Indian_or_Alaska_Native")
+TCGA_Asia <- subset(ORIEN_TCGA_all2_r, popID =="Asian")
+TCGA_AfAm <- subset(ORIEN_TCGA_all2_r, popID =="Black_or_African_American")
+TCGA_PacIsl <- subset(ORIEN_TCGA_all2_r, popID =="native_hawaiian_pacific-islander")
+TCGA_RaNR <- subset(ORIEN_TCGA_all2_r, popID =="Unknown/Not_Reported")
+TCGA_W <- subset(ORIEN_TCGA_all2_r, popID =="White")
+
+```
+
+
+PC1 vs. PC2 - ORIEN/TCGA Labels = Ethnicity
+```{r}
+
+#EUR 
+PC1_EUR <- EUR$PC1
+PC2_EUR <- EUR$PC2
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR, 
+    y = PC2_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC1_AFR <- AFR$PC1
+PC2_AFR <- AFR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR, 
+    y = PC2_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC1_AMR <- AMR$PC1
+PC2_AMR <- AMR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR, 
+    y = PC2_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC1_OCE <- OCE$PC1
+PC2_OCE <- OCE$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE, 
+    y = PC2_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC1_MDE <- MDE$PC1
+PC2_MDE <- MDE$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE, 
+    y = PC2_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC1_EAS <- EAS$PC1
+PC2_EAS <- EAS$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS, 
+    y = PC2_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC1_SAS <- SAS$PC1
+PC2_SAS <- SAS$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS, 
+    y = PC2_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC1_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC1
+PC2_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_Central_Asia_Siberia, 
+    y = PC2_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC1_West_Eurasia <- West_Eurasia$PC1
+PC2_West_Eurasia <- West_Eurasia$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_West_Eurasia, 
+    y = PC2_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+#ORIEN Hispanic/Latinx
+PC1_ORIEN_HL <- ORIEN_HL$PC1
+PC2_ORIEN_HL <- ORIEN_HL$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_HL, 
+    y = PC2_ORIEN_HL, 
+    marker = list(
+      color = 'dodgerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hispanic/Latinx')
+
+#ORIEN NOT Hispanic/Latinx
+PC1_ORIEN_NHL <- ORIEN_NHL$PC1
+PC2_ORIEN_NHL <- ORIEN_NHL$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_NHL, 
+    y = PC2_ORIEN_NHL, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: NOT Hispanic/Latinx')
+
+#ORIEN Unknown Ethnicity
+PC1_ORIEN_EthNR <- ORIEN_EthNR$PC1
+PC2_ORIEN_EthNR <- ORIEN_EthNR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_EthNR, 
+    y = PC2_ORIEN_EthNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Unknown Ethnicity')
+
+#TCGA_HL
+PC1_TCGA_HL <- TCGA_HL$PC1
+PC2_TCGA_HL <- TCGA_HL$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_HL, 
+    y = PC2_TCGA_HL, 
+    marker = list(
+      color = 'cornflowerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hispanic/Latinx')
+
+#TCGA NOT Hispanic/Latinx
+PC1_TCGA_NHL <- TCGA_NHL$PC1
+PC2_TCGA_NHL <- TCGA_NHL$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_NHL, 
+    y = PC2_TCGA_NHL, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: NOT Hispanic/Latinx')
+
+#TCGA Unknown Ethnicity
+PC1_TCGA_EthNR <- TCGA_EthNR$PC1
+PC2_TCGA_EthNR <- TCGA_EthNR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_EthNR, 
+    y = PC2_TCGA_EthNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Unknown Ethnicity')
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC2")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_ethnicity_PC1v2.html")
+
+#OTHER COLORS
+#crimson
+#cornflowerblue
+#dodgerblue
+#deepskyblue
+#coral1
+#blueviolet
+#darkorchid1
+#royalblue
+```
+
+PC2 vs. PC3 - ORIEN/TCGA Labels = Ethnicity
+```{r}
+
+#EUR 
+PC2_EUR <- EUR$PC2
+PC3_EUR <- EUR$PC3
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR, 
+    y = PC3_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC2_AFR <- AFR$PC2
+PC3_AFR <- AFR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR, 
+    y = PC3_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC2_AMR <- AMR$PC2
+PC3_AMR <- AMR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR, 
+    y = PC3_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC2_OCE <- OCE$PC2
+PC3_OCE <- OCE$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_OCE, 
+    y = PC3_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC2_MDE <- MDE$PC2
+PC3_MDE <- MDE$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_MDE, 
+    y = PC3_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC2_EAS <- EAS$PC2
+PC3_EAS <- EAS$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS, 
+    y = PC3_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC2_SAS <- SAS$PC2
+PC3_SAS <- SAS$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS, 
+    y = PC3_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC2_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC2
+PC3_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_Central_Asia_Siberia, 
+    y = PC3_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC2_West_Eurasia <- West_Eurasia$PC2
+PC3_West_Eurasia <- West_Eurasia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_West_Eurasia, 
+    y = PC3_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+#ORIEN Hispanic/Latinx
+PC2_ORIEN_HL <- ORIEN_HL$PC2
+PC3_ORIEN_HL <- ORIEN_HL$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_HL, 
+    y = PC3_ORIEN_HL, 
+    marker = list(
+      color = 'dodgerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hispanic/Latinx')
+
+#ORIEN NOT Hispanic/Latinx
+PC2_ORIEN_NHL <- ORIEN_NHL$PC2
+PC3_ORIEN_NHL <- ORIEN_NHL$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_NHL, 
+    y = PC3_ORIEN_NHL, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: NOT Hispanic/Latinx')
+
+#ORIEN Unknown Ethnicity
+PC2_ORIEN_EthNR <- ORIEN_EthNR$PC2
+PC3_ORIEN_EthNR <- ORIEN_EthNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_EthNR, 
+    y = PC3_ORIEN_EthNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Unknown Ethnicity')
+
+#TCGA_HL
+PC2_TCGA_HL <- TCGA_HL$PC2
+PC3_TCGA_HL <- TCGA_HL$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_HL, 
+    y = PC3_TCGA_HL, 
+    marker = list(
+      color = 'cornflowerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hispanic/Latinx')
+
+#TCGA NOT Hispanic/Latinx
+PC2_TCGA_NHL <- TCGA_NHL$PC2
+PC3_TCGA_NHL <- TCGA_NHL$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_NHL, 
+    y = PC3_TCGA_NHL, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: NOT Hispanic/Latinx')
+
+#TCGA Unknown Ethnicity
+PC2_TCGA_EthNR <- TCGA_EthNR$PC2
+PC3_TCGA_EthNR <- TCGA_EthNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_EthNR, 
+    y = PC3_TCGA_EthNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Unknown Ethnicity')
+
+x <- list(
+  title = "PC2")
+y <- list(
+  title = "PC3")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_ethnicity_PC2v3.html")
+
+#OTHER COLORS
+#crimson
+#cornflowerblue
+#dodgerblue
+#deepskyblue
+#coral1
+#blueviolet
+#darkorchid1
+#royalblue
+```
+
+PC3 vs. PC4 - ORIEN/TCGA Labels = Ethnicity
+```{r}
+
+#EUR 
+PC3_EUR <- EUR$PC3
+PC4_EUR <- EUR$PC4
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_EUR, 
+    y = PC4_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC3_AFR <- AFR$PC3
+PC4_AFR <- AFR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_AFR, 
+    y = PC4_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC3_AMR <- AMR$PC3
+PC4_AMR <- AMR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_AMR, 
+    y = PC4_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC3_OCE <- OCE$PC3
+PC4_OCE <- OCE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_OCE, 
+    y = PC4_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC3_MDE <- MDE$PC3
+PC4_MDE <- MDE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_MDE, 
+    y = PC4_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC3_EAS <- EAS$PC3
+PC4_EAS <- EAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_EAS, 
+    y = PC4_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC3_SAS <- SAS$PC3
+PC4_SAS <- SAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_SAS, 
+    y = PC4_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC3_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC3
+PC4_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_Central_Asia_Siberia, 
+    y = PC4_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC3_West_Eurasia <- West_Eurasia$PC3
+PC4_West_Eurasia <- West_Eurasia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_West_Eurasia, 
+    y = PC4_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+#ORIEN Hispanic/Latinx
+PC3_ORIEN_HL <- ORIEN_HL$PC3
+PC4_ORIEN_HL <- ORIEN_HL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_HL, 
+    y = PC4_ORIEN_HL, 
+    marker = list(
+      color = 'dodgerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hispanic/Latinx')
+
+#ORIEN NOT Hispanic/Latinx
+PC3_ORIEN_NHL <- ORIEN_NHL$PC3
+PC4_ORIEN_NHL <- ORIEN_NHL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_NHL, 
+    y = PC4_ORIEN_NHL, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: NOT Hispanic/Latinx')
+
+#ORIEN Unknown Ethnicity
+PC3_ORIEN_EthNR <- ORIEN_EthNR$PC3
+PC4_ORIEN_EthNR <- ORIEN_EthNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_EthNR, 
+    y = PC4_ORIEN_EthNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Unknown Ethnicity')
+
+#TCGA_HL
+PC3_TCGA_HL <- TCGA_HL$PC3
+PC4_TCGA_HL <- TCGA_HL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_HL, 
+    y = PC4_TCGA_HL, 
+    marker = list(
+      color = 'cornflowerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hispanic/Latinx')
+
+#TCGA NOT Hispanic/Latinx
+PC3_TCGA_NHL <- TCGA_NHL$PC3
+PC4_TCGA_NHL <- TCGA_NHL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_NHL, 
+    y = PC4_TCGA_NHL, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: NOT Hispanic/Latinx')
+
+#TCGA Unknown Ethnicity
+PC3_TCGA_EthNR <- TCGA_EthNR$PC3
+PC4_TCGA_EthNR <- TCGA_EthNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_EthNR, 
+    y = PC4_TCGA_EthNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Unknown Ethnicity')
+
+x <- list(
+  title = "PC3")
+y <- list(
+  title = "PC4")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_ethnicity_PC3v4.html")
+
+#OTHER COLORS
+#crimson
+#cornflowerblue
+#dodgerblue
+#deepskyblue
+#coral1
+#blueviolet
+#darkorchid1
+#royalblue
+```
+
+PC1 vs. PC3 - ORIEN/TCGA Labels = Ethnicity
+```{r}
+
+#EUR 
+PC1_EUR <- EUR$PC1
+PC3_EUR <- EUR$PC3
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR, 
+    y = PC3_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC1_AFR <- AFR$PC1
+PC3_AFR <- AFR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR, 
+    y = PC3_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC1_AMR <- AMR$PC1
+PC3_AMR <- AMR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR, 
+    y = PC3_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC1_OCE <- OCE$PC1
+PC3_OCE <- OCE$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE, 
+    y = PC3_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC1_MDE <- MDE$PC1
+PC3_MDE <- MDE$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE, 
+    y = PC3_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC1_EAS <- EAS$PC1
+PC3_EAS <- EAS$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS, 
+    y = PC3_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC1_SAS <- SAS$PC1
+PC3_SAS <- SAS$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS, 
+    y = PC3_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC1_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC1
+PC3_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_Central_Asia_Siberia, 
+    y = PC3_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC1_West_Eurasia <- West_Eurasia$PC1
+PC3_West_Eurasia <- West_Eurasia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_West_Eurasia, 
+    y = PC3_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+#ORIEN Hispanic/Latinx
+PC1_ORIEN_HL <- ORIEN_HL$PC1
+PC3_ORIEN_HL <- ORIEN_HL$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_HL, 
+    y = PC3_ORIEN_HL, 
+    marker = list(
+      color = 'dodgerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hispanic/Latinx')
+
+#ORIEN NOT Hispanic/Latinx
+PC1_ORIEN_NHL <- ORIEN_NHL$PC1
+PC3_ORIEN_NHL <- ORIEN_NHL$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_NHL, 
+    y = PC3_ORIEN_NHL, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: NOT Hispanic/Latinx')
+
+#ORIEN Unknown Ethnicity
+PC1_ORIEN_EthNR <- ORIEN_EthNR$PC1
+PC3_ORIEN_EthNR <- ORIEN_EthNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_EthNR, 
+    y = PC3_ORIEN_EthNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Unknown Ethnicity')
+
+#TCGA_HL
+PC1_TCGA_HL <- TCGA_HL$PC1
+PC3_TCGA_HL <- TCGA_HL$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_HL, 
+    y = PC3_TCGA_HL, 
+    marker = list(
+      color = 'cornflowerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hispanic/Latinx')
+
+#TCGA NOT Hispanic/Latinx
+PC1_TCGA_NHL <- TCGA_NHL$PC1
+PC3_TCGA_NHL <- TCGA_NHL$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_NHL, 
+    y = PC3_TCGA_NHL, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: NOT Hispanic/Latinx')
+
+#TCGA Unknown Ethnicity
+PC1_TCGA_EthNR <- TCGA_EthNR$PC1
+PC3_TCGA_EthNR <- TCGA_EthNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_EthNR, 
+    y = PC3_TCGA_EthNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Unknown Ethnicity')
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC3")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_ethnicity_PC1v3.html")
+
+#OTHER COLORS
+#crimson
+#cornflowerblue
+#dodgerblue
+#deepskyblue
+#coral1
+#blueviolet
+#darkorchid1
+#royalblue
+```
+
+PC1 vs. PC4 - ORIEN/TCGA Labels = Ethnicity
+```{r}
+
+#EUR 
+PC1_EUR <- EUR$PC1
+PC4_EUR <- EUR$PC4
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR, 
+    y = PC4_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC1_AFR <- AFR$PC1
+PC4_AFR <- AFR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR, 
+    y = PC4_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC1_AMR <- AMR$PC1
+PC4_AMR <- AMR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR, 
+    y = PC4_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC1_OCE <- OCE$PC1
+PC4_OCE <- OCE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE, 
+    y = PC4_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC1_MDE <- MDE$PC1
+PC4_MDE <- MDE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE, 
+    y = PC4_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC1_EAS <- EAS$PC1
+PC4_EAS <- EAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS, 
+    y = PC4_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC1_SAS <- SAS$PC1
+PC4_SAS <- SAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS, 
+    y = PC4_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC1_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC1
+PC4_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_Central_Asia_Siberia, 
+    y = PC4_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC1_West_Eurasia <- West_Eurasia$PC1
+PC4_West_Eurasia <- West_Eurasia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_West_Eurasia, 
+    y = PC4_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+#ORIEN Hispanic/Latinx
+PC1_ORIEN_HL <- ORIEN_HL$PC1
+PC4_ORIEN_HL <- ORIEN_HL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_HL, 
+    y = PC4_ORIEN_HL, 
+    marker = list(
+      color = 'dodgerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hispanic/Latinx')
+
+#ORIEN NOT Hispanic/Latinx
+PC1_ORIEN_NHL <- ORIEN_NHL$PC1
+PC4_ORIEN_NHL <- ORIEN_NHL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_NHL, 
+    y = PC4_ORIEN_NHL, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: NOT Hispanic/Latinx')
+
+#ORIEN Unknown Ethnicity
+PC1_ORIEN_EthNR <- ORIEN_EthNR$PC1
+PC4_ORIEN_EthNR <- ORIEN_EthNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_EthNR, 
+    y = PC4_ORIEN_EthNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Unknown Ethnicity')
+
+#TCGA_HL
+PC1_TCGA_HL <- TCGA_HL$PC1
+PC4_TCGA_HL <- TCGA_HL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_HL, 
+    y = PC4_TCGA_HL, 
+    marker = list(
+      color = 'cornflowerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hispanic/Latinx')
+
+#TCGA NOT Hispanic/Latinx
+PC1_TCGA_NHL <- TCGA_NHL$PC1
+PC4_TCGA_NHL <- TCGA_NHL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_NHL, 
+    y = PC4_TCGA_NHL, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: NOT Hispanic/Latinx')
+
+#TCGA Unknown Ethnicity
+PC1_TCGA_EthNR <- TCGA_EthNR$PC1
+PC4_TCGA_EthNR <- TCGA_EthNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_EthNR, 
+    y = PC4_TCGA_EthNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Unknown Ethnicity')
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC4")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_ethnicity_PC1v4.html")
+
+#OTHER COLORS
+#crimson
+#cornflowerblue
+#dodgerblue
+#deepskyblue
+#coral1
+#blueviolet
+#darkorchid1
+#royalblue
+```
+
+PC2 vs. PC4 - ORIEN/TCGA Labels = Ethnicity
+```{r}
+
+#EUR 
+PC2_EUR <- EUR$PC2
+PC4_EUR <- EUR$PC4
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR, 
+    y = PC4_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC2_AFR <- AFR$PC2
+PC4_AFR <- AFR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR, 
+    y = PC4_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC2_AMR <- AMR$PC2
+PC4_AMR <- AMR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR, 
+    y = PC4_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC2_OCE <- OCE$PC2
+PC4_OCE <- OCE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_OCE, 
+    y = PC4_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC2_MDE <- MDE$PC2
+PC4_MDE <- MDE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_MDE, 
+    y = PC4_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC2_EAS <- EAS$PC2
+PC4_EAS <- EAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS, 
+    y = PC4_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC2_SAS <- SAS$PC2
+PC4_SAS <- SAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS, 
+    y = PC4_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC2_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC2
+PC4_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_Central_Asia_Siberia, 
+    y = PC4_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC2_West_Eurasia <- West_Eurasia$PC2
+PC4_West_Eurasia <- West_Eurasia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_West_Eurasia, 
+    y = PC4_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+#ORIEN Hispanic/Latinx
+PC2_ORIEN_HL <- ORIEN_HL$PC2
+PC4_ORIEN_HL <- ORIEN_HL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_HL, 
+    y = PC4_ORIEN_HL, 
+    marker = list(
+      color = 'dodgerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hispanic/Latinx')
+
+#ORIEN NOT Hispanic/Latinx
+PC2_ORIEN_NHL <- ORIEN_NHL$PC2
+PC4_ORIEN_NHL <- ORIEN_NHL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_NHL, 
+    y = PC4_ORIEN_NHL, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: NOT Hispanic/Latinx')
+
+#ORIEN Unknown Ethnicity
+PC2_ORIEN_EthNR <- ORIEN_EthNR$PC2
+PC4_ORIEN_EthNR <- ORIEN_EthNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_EthNR, 
+    y = PC4_ORIEN_EthNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Unknown Ethnicity')
+
+#TCGA_HL
+PC2_TCGA_HL <- TCGA_HL$PC2
+PC4_TCGA_HL <- TCGA_HL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_HL, 
+    y = PC4_TCGA_HL, 
+    marker = list(
+      color = 'cornflowerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hispanic/Latinx')
+
+#TCGA NOT Hispanic/Latinx
+PC2_TCGA_NHL <- TCGA_NHL$PC2
+PC4_TCGA_NHL <- TCGA_NHL$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_NHL, 
+    y = PC4_TCGA_NHL, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: NOT Hispanic/Latinx')
+
+#TCGA Unknown Ethnicity
+PC2_TCGA_EthNR <- TCGA_EthNR$PC2
+PC4_TCGA_EthNR <- TCGA_EthNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_EthNR, 
+    y = PC4_TCGA_EthNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Unknown Ethnicity')
+
+x <- list(
+  title = "PC2")
+y <- list(
+  title = "PC4")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_ethnicity_PC2v4.html")
+
+#OTHER COLORS
+#crimson
+#cornflowerblue
+#dodgerblue
+#deepskyblue
+#coral1
+#blueviolet
+#darkorchid1
+#royalblue
+```
+
+#-------------------
+PC1 vs. PC2 - ORIEN/TCGA Labels = Race
+```{r}
+
+#EUR 
+PC1_EUR <- EUR$PC1
+PC2_EUR <- EUR$PC2
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR, 
+    y = PC2_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC1_AFR <- AFR$PC1
+PC2_AFR <- AFR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR, 
+    y = PC2_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC1_AMR <- AMR$PC1
+PC2_AMR <- AMR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR, 
+    y = PC2_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC1_OCE <- OCE$PC1
+PC2_OCE <- OCE$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE, 
+    y = PC2_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC1_MDE <- MDE$PC1
+PC2_MDE <- MDE$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE, 
+    y = PC2_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC1_EAS <- EAS$PC1
+PC2_EAS <- EAS$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS, 
+    y = PC2_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC1_SAS <- SAS$PC1
+PC2_SAS <- SAS$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS, 
+    y = PC2_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC1_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC1
+PC2_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_Central_Asia_Siberia, 
+    y = PC2_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC1_West_Eurasia <- West_Eurasia$PC1
+PC2_West_Eurasia <- West_Eurasia$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_West_Eurasia, 
+    y = PC2_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+
+
+#ORIEN American Indian Alaska Native
+PC1_ORIEN_NAm <- ORIEN_NAm$PC1
+PC2_ORIEN_NAm <- ORIEN_NAm$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_NAm, 
+    y = PC2_ORIEN_NAm, 
+    marker = list(
+      color = 'salmon',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: American Indian or Alaska Native')
+
+#ORIEN Asian
+PC1_ORIEN_Asia <- ORIEN_Asia$PC1
+PC2_ORIEN_Asia <- ORIEN_Asia$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_Asia, 
+    y = PC2_ORIEN_Asia, 
+    marker = list(
+      color = 'forestgreen',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Asian')
+
+#ORIEN African American/Black
+PC1_ORIEN_AfAm <- ORIEN_AfAm$PC1
+PC2_ORIEN_AfAm <- ORIEN_AfAm$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_AfAm, 
+    y = PC2_ORIEN_AfAm, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Black or African American')
+
+#ORIEN Hawaiian or Other Pacific Islander
+PC1_ORIEN_PacIsl <- ORIEN_PacIsl$PC1
+PC2_ORIEN_PacIsl <- ORIEN_PacIsl$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_PacIsl, 
+    y = PC2_ORIEN_PacIsl, 
+    marker = list(
+      color = 'darkblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hawaiian or Other Pacific Islander')
+
+#ORIEN Not Reported/Unknown
+PC1_ORIEN_RaNR <- ORIEN_RaNR$PC1
+PC2_ORIEN_RaNR <- ORIEN_RaNR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_RaNR, 
+    y = PC2_ORIEN_RaNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Race Unknown/Not Reported')
+
+#ORIEN White
+PC1_ORIEN_W <- ORIEN_W$PC1
+PC2_ORIEN_W <- ORIEN_W$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_W, 
+    y = PC2_ORIEN_W, 
+    marker = list(
+      color = 'darkred',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: White')
+
+#ORIEN Other Race
+PC1_ORIEN_OthRace <- ORIEN_OthRace$PC1
+PC2_ORIEN_OthRace <- ORIEN_OthRace$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_OthRace, 
+    y = PC2_ORIEN_OthRace, 
+    marker = list(
+      color = 'midnightblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Other Race')
+
+#TCGA American Indian Alaska Native
+PC1_TCGA_NAm <- TCGA_NAm$PC1
+PC2_TCGA_NAm <- TCGA_NAm$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_NAm, 
+    y = PC2_TCGA_NAm, 
+    marker = list(
+      color = 'lightpink',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: American Indian or Alaska Native')
+
+#TCGA Asian
+PC1_TCGA_Asia <- TCGA_Asia$PC1
+PC2_TCGA_Asia <- TCGA_Asia$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_Asia, 
+    y = PC2_TCGA_Asia, 
+    marker = list(
+      color = 'seagreen1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Asian')
+
+#TCGA African American/Black
+PC1_TCGA_AfAm <- TCGA_AfAm$PC1
+PC2_TCGA_AfAm <- TCGA_AfAm$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_AfAm, 
+    y = PC2_TCGA_AfAm, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Black or African American')
+
+#TCGA Hawaiian or Other Pacific Islander
+PC1_TCGA_PacIsl <- TCGA_PacIsl$PC1
+PC2_TCGA_PacIsl <- TCGA_PacIsl$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_PacIsl, 
+    y = PC2_TCGA_PacIsl, 
+    marker = list(
+      color = 'blueviolet',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hawaiian or Other Pacific Islander')
+
+#TCGA Not Reported/Unknown
+PC1_TCGA_RaNR <- TCGA_RaNR$PC1
+PC2_TCGA_RaNR <- TCGA_RaNR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_RaNR, 
+    y = PC2_TCGA_RaNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Race Unknown/Not Reported')
+
+#TCGA White
+PC1_TCGA_W <- TCGA_W$PC1
+PC2_TCGA_W <- TCGA_W$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_W, 
+    y = PC2_TCGA_W, 
+    marker = list(
+      color = 'crimson',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: White')
+
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC2")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_race_PC1v2.html")
+
+#OTHER COLORS
+  #deepskyblue
+  #royalblue
+```
+
+PC2 vs. PC3 - ORIEN/TCGA Labels = Race
+```{r}
+
+#EUR 
+PC2_EUR <- EUR$PC2
+PC3_EUR <- EUR$PC3
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR, 
+    y = PC3_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC2_AFR <- AFR$PC2
+PC3_AFR <- AFR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR, 
+    y = PC3_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC2_AMR <- AMR$PC2
+PC3_AMR <- AMR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR, 
+    y = PC3_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC2_OCE <- OCE$PC2
+PC3_OCE <- OCE$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_OCE, 
+    y = PC3_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC2_MDE <- MDE$PC2
+PC3_MDE <- MDE$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_MDE, 
+    y = PC3_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC2_EAS <- EAS$PC2
+PC3_EAS <- EAS$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS, 
+    y = PC3_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC2_SAS <- SAS$PC2
+PC3_SAS <- SAS$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS, 
+    y = PC3_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC2_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC2
+PC3_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_Central_Asia_Siberia, 
+    y = PC3_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC2_West_Eurasia <- West_Eurasia$PC2
+PC3_West_Eurasia <- West_Eurasia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_West_Eurasia, 
+    y = PC3_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+
+
+#ORIEN American Indian Alaska Native
+PC2_ORIEN_NAm <- ORIEN_NAm$PC2
+PC3_ORIEN_NAm <- ORIEN_NAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_NAm, 
+    y = PC3_ORIEN_NAm, 
+    marker = list(
+      color = 'salmon',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: American Indian or Alaska Native')
+
+#ORIEN Asian
+PC2_ORIEN_Asia <- ORIEN_Asia$PC2
+PC3_ORIEN_Asia <- ORIEN_Asia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_Asia, 
+    y = PC3_ORIEN_Asia, 
+    marker = list(
+      color = 'forestgreen',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Asian')
+
+#ORIEN African American/Black
+PC2_ORIEN_AfAm <- ORIEN_AfAm$PC2
+PC3_ORIEN_AfAm <- ORIEN_AfAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_AfAm, 
+    y = PC3_ORIEN_AfAm, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Black or African American')
+
+#ORIEN Hawaiian or Other Pacific Islander
+PC2_ORIEN_PacIsl <- ORIEN_PacIsl$PC2
+PC3_ORIEN_PacIsl <- ORIEN_PacIsl$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_PacIsl, 
+    y = PC3_ORIEN_PacIsl, 
+    marker = list(
+      color = 'darkblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hawaiian or Other Pacific Islander')
+
+#ORIEN Not Reported/Unknown
+PC2_ORIEN_RaNR <- ORIEN_RaNR$PC2
+PC3_ORIEN_RaNR <- ORIEN_RaNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_RaNR, 
+    y = PC3_ORIEN_RaNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Race Unknown/Not Reported')
+
+#ORIEN White
+PC2_ORIEN_W <- ORIEN_W$PC2
+PC3_ORIEN_W <- ORIEN_W$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_W, 
+    y = PC3_ORIEN_W, 
+    marker = list(
+      color = 'darkred',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: White')
+
+#ORIEN Other Race
+PC2_ORIEN_OthRace <- ORIEN_OthRace$PC2
+PC3_ORIEN_OthRace <- ORIEN_OthRace$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_OthRace, 
+    y = PC3_ORIEN_OthRace, 
+    marker = list(
+      color = 'midnightblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Other Race')
+
+#TCGA American Indian Alaska Native
+PC2_TCGA_NAm <- TCGA_NAm$PC2
+PC3_TCGA_NAm <- TCGA_NAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_NAm, 
+    y = PC3_TCGA_NAm, 
+    marker = list(
+      color = 'lightpink',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: American Indian or Alaska Native')
+
+#TCGA Asian
+PC2_TCGA_Asia <- TCGA_Asia$PC2
+PC3_TCGA_Asia <- TCGA_Asia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_Asia, 
+    y = PC3_TCGA_Asia, 
+    marker = list(
+      color = 'seagreen1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Asian')
+
+#TCGA African American/Black
+PC2_TCGA_AfAm <- TCGA_AfAm$PC2
+PC3_TCGA_AfAm <- TCGA_AfAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_AfAm, 
+    y = PC3_TCGA_AfAm, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Black or African American')
+
+#TCGA Hawaiian or Other Pacific Islander
+PC2_TCGA_PacIsl <- TCGA_PacIsl$PC2
+PC3_TCGA_PacIsl <- TCGA_PacIsl$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_PacIsl, 
+    y = PC3_TCGA_PacIsl, 
+    marker = list(
+      color = 'blueviolet',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hawaiian or Other Pacific Islander')
+
+#TCGA Not Reported/Unknown
+PC2_TCGA_RaNR <- TCGA_RaNR$PC2
+PC3_TCGA_RaNR <- TCGA_RaNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_RaNR, 
+    y = PC3_TCGA_RaNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Race Unknown/Not Reported')
+
+#TCGA White
+PC2_TCGA_W <- TCGA_W$PC2
+PC3_TCGA_W <- TCGA_W$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_W, 
+    y = PC3_TCGA_W, 
+    marker = list(
+      color = 'crimson',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: White')
+
+
+x <- list(
+  title = "PC2")
+y <- list(
+  title = "PC3")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_race_PC2v3.html")
+
+#OTHER COLORS
+  #deepskyblue
+  #royalblue
+```
+
+PC3 vs. PC4 - ORIEN/TCGA Labels = Race
+```{r}
+
+#EUR 
+PC3_EUR <- EUR$PC3
+PC4_EUR <- EUR$PC4
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_EUR, 
+    y = PC4_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC3_AFR <- AFR$PC3
+PC4_AFR <- AFR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_AFR, 
+    y = PC4_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC3_AMR <- AMR$PC3
+PC4_AMR <- AMR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_AMR, 
+    y = PC4_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC3_OCE <- OCE$PC3
+PC4_OCE <- OCE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_OCE, 
+    y = PC4_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC3_MDE <- MDE$PC3
+PC4_MDE <- MDE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_MDE, 
+    y = PC4_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC3_EAS <- EAS$PC3
+PC4_EAS <- EAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_EAS, 
+    y = PC4_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC3_SAS <- SAS$PC3
+PC4_SAS <- SAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_SAS, 
+    y = PC4_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC3_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC3
+PC4_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_Central_Asia_Siberia, 
+    y = PC4_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC3_West_Eurasia <- West_Eurasia$PC3
+PC4_West_Eurasia <- West_Eurasia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_West_Eurasia, 
+    y = PC4_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+
+
+#ORIEN American Indian Alaska Native
+PC3_ORIEN_NAm <- ORIEN_NAm$PC3
+PC4_ORIEN_NAm <- ORIEN_NAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_NAm, 
+    y = PC4_ORIEN_NAm, 
+    marker = list(
+      color = 'salmon',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: American Indian or Alaska Native')
+
+#ORIEN Asian
+PC3_ORIEN_Asia <- ORIEN_Asia$PC3
+PC4_ORIEN_Asia <- ORIEN_Asia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_Asia, 
+    y = PC4_ORIEN_Asia, 
+    marker = list(
+      color = 'forestgreen',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Asian')
+
+#ORIEN African American/Black
+PC3_ORIEN_AfAm <- ORIEN_AfAm$PC3
+PC4_ORIEN_AfAm <- ORIEN_AfAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_AfAm, 
+    y = PC4_ORIEN_AfAm, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Black or African American')
+
+#ORIEN Hawaiian or Other Pacific Islander
+PC3_ORIEN_PacIsl <- ORIEN_PacIsl$PC3
+PC4_ORIEN_PacIsl <- ORIEN_PacIsl$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_PacIsl, 
+    y = PC4_ORIEN_PacIsl, 
+    marker = list(
+      color = 'darkblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hawaiian or Other Pacific Islander')
+
+#ORIEN Not Reported/Unknown
+PC3_ORIEN_RaNR <- ORIEN_RaNR$PC3
+PC4_ORIEN_RaNR <- ORIEN_RaNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_RaNR, 
+    y = PC4_ORIEN_RaNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Race Unknown/Not Reported')
+
+#ORIEN White
+PC3_ORIEN_W <- ORIEN_W$PC3
+PC4_ORIEN_W <- ORIEN_W$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_W, 
+    y = PC4_ORIEN_W, 
+    marker = list(
+      color = 'darkred',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: White')
+
+#ORIEN Other Race
+PC3_ORIEN_OthRace <- ORIEN_OthRace$PC3
+PC4_ORIEN_OthRace <- ORIEN_OthRace$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_ORIEN_OthRace, 
+    y = PC4_ORIEN_OthRace, 
+    marker = list(
+      color = 'midnightblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Other Race')
+
+#TCGA American Indian Alaska Native
+PC3_TCGA_NAm <- TCGA_NAm$PC3
+PC4_TCGA_NAm <- TCGA_NAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_NAm, 
+    y = PC4_TCGA_NAm, 
+    marker = list(
+      color = 'lightpink',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: American Indian or Alaska Native')
+
+#TCGA Asian
+PC3_TCGA_Asia <- TCGA_Asia$PC3
+PC4_TCGA_Asia <- TCGA_Asia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_Asia, 
+    y = PC4_TCGA_Asia, 
+    marker = list(
+      color = 'seagreen1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Asian')
+
+#TCGA African American/Black
+PC3_TCGA_AfAm <- TCGA_AfAm$PC3
+PC4_TCGA_AfAm <- TCGA_AfAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_AfAm, 
+    y = PC4_TCGA_AfAm, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Black or African American')
+
+#TCGA Hawaiian or Other Pacific Islander
+PC3_TCGA_PacIsl <- TCGA_PacIsl$PC3
+PC4_TCGA_PacIsl <- TCGA_PacIsl$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_PacIsl, 
+    y = PC4_TCGA_PacIsl, 
+    marker = list(
+      color = 'blueviolet',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hawaiian or Other Pacific Islander')
+
+#TCGA Not Reported/Unknown
+PC3_TCGA_RaNR <- TCGA_RaNR$PC3
+PC4_TCGA_RaNR <- TCGA_RaNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_RaNR, 
+    y = PC4_TCGA_RaNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Race Unknown/Not Reported')
+
+#TCGA White
+PC3_TCGA_W <- TCGA_W$PC3
+PC4_TCGA_W <- TCGA_W$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC3_TCGA_W, 
+    y = PC4_TCGA_W, 
+    marker = list(
+      color = 'crimson',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: White')
+
+
+x <- list(
+  title = "PC3")
+y <- list(
+  title = "PC4")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_race_PC3v4.html")
+
+#OTHER COLORS
+  #deepskyblue
+  #royalblue
+```
+
+PC1 vs. PC3 - ORIEN/TCGA Labels = Race
+```{r}
+
+#EUR 
+PC1_EUR <- EUR$PC1
+PC3_EUR <- EUR$PC3
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR, 
+    y = PC3_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC1_AFR <- AFR$PC1
+PC3_AFR <- AFR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR, 
+    y = PC3_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC1_AMR <- AMR$PC1
+PC3_AMR <- AMR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR, 
+    y = PC3_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC1_OCE <- OCE$PC1
+PC3_OCE <- OCE$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE, 
+    y = PC3_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC1_MDE <- MDE$PC1
+PC3_MDE <- MDE$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE, 
+    y = PC3_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC1_EAS <- EAS$PC1
+PC3_EAS <- EAS$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS, 
+    y = PC3_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC1_SAS <- SAS$PC1
+PC3_SAS <- SAS$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS, 
+    y = PC3_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC1_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC1
+PC3_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_Central_Asia_Siberia, 
+    y = PC3_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC1_West_Eurasia <- West_Eurasia$PC1
+PC3_West_Eurasia <- West_Eurasia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_West_Eurasia, 
+    y = PC3_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+
+
+#ORIEN American Indian Alaska Native
+PC1_ORIEN_NAm <- ORIEN_NAm$PC1
+PC3_ORIEN_NAm <- ORIEN_NAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_NAm, 
+    y = PC3_ORIEN_NAm, 
+    marker = list(
+      color = 'salmon',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: American Indian or Alaska Native')
+
+#ORIEN Asian
+PC1_ORIEN_Asia <- ORIEN_Asia$PC1
+PC3_ORIEN_Asia <- ORIEN_Asia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_Asia, 
+    y = PC3_ORIEN_Asia, 
+    marker = list(
+      color = 'forestgreen',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Asian')
+
+#ORIEN African American/Black
+PC1_ORIEN_AfAm <- ORIEN_AfAm$PC1
+PC3_ORIEN_AfAm <- ORIEN_AfAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_AfAm, 
+    y = PC3_ORIEN_AfAm, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Black or African American')
+
+#ORIEN Hawaiian or Other Pacific Islander
+PC1_ORIEN_PacIsl <- ORIEN_PacIsl$PC1
+PC3_ORIEN_PacIsl <- ORIEN_PacIsl$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_PacIsl, 
+    y = PC3_ORIEN_PacIsl, 
+    marker = list(
+      color = 'darkblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hawaiian or Other Pacific Islander')
+
+#ORIEN Not Reported/Unknown
+PC1_ORIEN_RaNR <- ORIEN_RaNR$PC1
+PC3_ORIEN_RaNR <- ORIEN_RaNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_RaNR, 
+    y = PC3_ORIEN_RaNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Race Unknown/Not Reported')
+
+#ORIEN White
+PC1_ORIEN_W <- ORIEN_W$PC1
+PC3_ORIEN_W <- ORIEN_W$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_W, 
+    y = PC3_ORIEN_W, 
+    marker = list(
+      color = 'darkred',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: White')
+
+#ORIEN Other Race
+PC1_ORIEN_OthRace <- ORIEN_OthRace$PC1
+PC3_ORIEN_OthRace <- ORIEN_OthRace$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_OthRace, 
+    y = PC3_ORIEN_OthRace, 
+    marker = list(
+      color = 'midnightblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Other Race')
+
+#TCGA American Indian Alaska Native
+PC1_TCGA_NAm <- TCGA_NAm$PC1
+PC3_TCGA_NAm <- TCGA_NAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_NAm, 
+    y = PC3_TCGA_NAm, 
+    marker = list(
+      color = 'lightpink',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: American Indian or Alaska Native')
+
+#TCGA Asian
+PC1_TCGA_Asia <- TCGA_Asia$PC1
+PC3_TCGA_Asia <- TCGA_Asia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_Asia, 
+    y = PC3_TCGA_Asia, 
+    marker = list(
+      color = 'seagreen1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Asian')
+
+#TCGA African American/Black
+PC1_TCGA_AfAm <- TCGA_AfAm$PC1
+PC3_TCGA_AfAm <- TCGA_AfAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_AfAm, 
+    y = PC3_TCGA_AfAm, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Black or African American')
+
+#TCGA Hawaiian or Other Pacific Islander
+PC1_TCGA_PacIsl <- TCGA_PacIsl$PC1
+PC3_TCGA_PacIsl <- TCGA_PacIsl$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_PacIsl, 
+    y = PC3_TCGA_PacIsl, 
+    marker = list(
+      color = 'blueviolet',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hawaiian or Other Pacific Islander')
+
+#TCGA Not Reported/Unknown
+PC1_TCGA_RaNR <- TCGA_RaNR$PC1
+PC3_TCGA_RaNR <- TCGA_RaNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_RaNR, 
+    y = PC3_TCGA_RaNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Race Unknown/Not Reported')
+
+#TCGA White
+PC1_TCGA_W <- TCGA_W$PC1
+PC3_TCGA_W <- TCGA_W$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_W, 
+    y = PC3_TCGA_W, 
+    marker = list(
+      color = 'crimson',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: White')
+
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC3")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_race_PC1v3.html")
+
+#OTHER COLORS
+  #deepskyblue
+  #royalblue
+```
+
+PC1 vs. PC4 - ORIEN/TCGA Labels = Race
+```{r}
+
+#EUR 
+PC1_EUR <- EUR$PC1
+PC4_EUR <- EUR$PC4
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR, 
+    y = PC4_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC1_AFR <- AFR$PC1
+PC4_AFR <- AFR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR, 
+    y = PC4_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC1_AMR <- AMR$PC1
+PC4_AMR <- AMR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR, 
+    y = PC4_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC1_OCE <- OCE$PC1
+PC4_OCE <- OCE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE, 
+    y = PC4_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC1_MDE <- MDE$PC1
+PC4_MDE <- MDE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE, 
+    y = PC4_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC1_EAS <- EAS$PC1
+PC4_EAS <- EAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS, 
+    y = PC4_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC1_SAS <- SAS$PC1
+PC4_SAS <- SAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS, 
+    y = PC4_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC1_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC1
+PC4_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_Central_Asia_Siberia, 
+    y = PC4_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC1_West_Eurasia <- West_Eurasia$PC1
+PC4_West_Eurasia <- West_Eurasia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_West_Eurasia, 
+    y = PC4_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+
+
+#ORIEN American Indian Alaska Native
+PC1_ORIEN_NAm <- ORIEN_NAm$PC1
+PC4_ORIEN_NAm <- ORIEN_NAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_NAm, 
+    y = PC4_ORIEN_NAm, 
+    marker = list(
+      color = 'salmon',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: American Indian or Alaska Native')
+
+#ORIEN Asian
+PC1_ORIEN_Asia <- ORIEN_Asia$PC1
+PC4_ORIEN_Asia <- ORIEN_Asia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_Asia, 
+    y = PC4_ORIEN_Asia, 
+    marker = list(
+      color = 'forestgreen',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Asian')
+
+#ORIEN African American/Black
+PC1_ORIEN_AfAm <- ORIEN_AfAm$PC1
+PC4_ORIEN_AfAm <- ORIEN_AfAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_AfAm, 
+    y = PC4_ORIEN_AfAm, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Black or African American')
+
+#ORIEN Hawaiian or Other Pacific Islander
+PC1_ORIEN_PacIsl <- ORIEN_PacIsl$PC1
+PC4_ORIEN_PacIsl <- ORIEN_PacIsl$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_PacIsl, 
+    y = PC4_ORIEN_PacIsl, 
+    marker = list(
+      color = 'darkblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hawaiian or Other Pacific Islander')
+
+#ORIEN Not Reported/Unknown
+PC1_ORIEN_RaNR <- ORIEN_RaNR$PC1
+PC4_ORIEN_RaNR <- ORIEN_RaNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_RaNR, 
+    y = PC4_ORIEN_RaNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Race Unknown/Not Reported')
+
+#ORIEN White
+PC1_ORIEN_W <- ORIEN_W$PC1
+PC4_ORIEN_W <- ORIEN_W$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_W, 
+    y = PC4_ORIEN_W, 
+    marker = list(
+      color = 'darkred',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: White')
+
+#ORIEN Other Race
+PC1_ORIEN_OthRace <- ORIEN_OthRace$PC1
+PC4_ORIEN_OthRace <- ORIEN_OthRace$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_ORIEN_OthRace, 
+    y = PC4_ORIEN_OthRace, 
+    marker = list(
+      color = 'midnightblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Other Race')
+
+#TCGA American Indian Alaska Native
+PC1_TCGA_NAm <- TCGA_NAm$PC1
+PC4_TCGA_NAm <- TCGA_NAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_NAm, 
+    y = PC4_TCGA_NAm, 
+    marker = list(
+      color = 'lightpink',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: American Indian or Alaska Native')
+
+#TCGA Asian
+PC1_TCGA_Asia <- TCGA_Asia$PC1
+PC4_TCGA_Asia <- TCGA_Asia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_Asia, 
+    y = PC4_TCGA_Asia, 
+    marker = list(
+      color = 'seagreen1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Asian')
+
+#TCGA African American/Black
+PC1_TCGA_AfAm <- TCGA_AfAm$PC1
+PC4_TCGA_AfAm <- TCGA_AfAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_AfAm, 
+    y = PC4_TCGA_AfAm, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Black or African American')
+
+#TCGA Hawaiian or Other Pacific Islander
+PC1_TCGA_PacIsl <- TCGA_PacIsl$PC1
+PC4_TCGA_PacIsl <- TCGA_PacIsl$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_PacIsl, 
+    y = PC4_TCGA_PacIsl, 
+    marker = list(
+      color = 'blueviolet',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hawaiian or Other Pacific Islander')
+
+#TCGA Not Reported/Unknown
+PC1_TCGA_RaNR <- TCGA_RaNR$PC1
+PC4_TCGA_RaNR <- TCGA_RaNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_RaNR, 
+    y = PC4_TCGA_RaNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Race Unknown/Not Reported')
+
+#TCGA White
+PC1_TCGA_W <- TCGA_W$PC1
+PC4_TCGA_W <- TCGA_W$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_TCGA_W, 
+    y = PC4_TCGA_W, 
+    marker = list(
+      color = 'crimson',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: White')
+
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC4")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_race_PC1v4.html")
+
+#OTHER COLORS
+  #deepskyblue
+  #royalblue
+```
+
+PC2 vs. PC4 - ORIEN/TCGA Labels = Race
+```{r}
+
+#EUR 
+PC2_EUR <- EUR$PC2
+PC4_EUR <- EUR$PC4
+PCA <- plot_ly(data = references, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR, 
+    y = PC4_EUR, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR')
+
+
+#AFR
+PC2_AFR <- AFR$PC2
+PC4_AFR <- AFR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR, 
+    y = PC4_AFR, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR')
+
+
+#AMR
+PC2_AMR <- AMR$PC2
+PC4_AMR <- AMR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR, 
+    y = PC4_AMR, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR')
+
+
+#OCE
+PC2_OCE <- OCE$PC2
+PC4_OCE <- OCE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_OCE, 
+    y = PC4_OCE, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE')
+
+
+#MDE
+PC2_MDE <- MDE$PC2
+PC4_MDE <- MDE$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_MDE, 
+    y = PC4_MDE, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE')
+
+
+#EAS
+PC2_EAS <- EAS$PC2
+PC4_EAS <- EAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS, 
+    y = PC4_EAS, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS')
+
+
+#SAS
+PC2_SAS <- SAS$PC2
+PC4_SAS <- SAS$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS, 
+    y = PC4_SAS, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS')
+
+#Central_Asia_Siberia
+PC2_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC2
+PC4_Central_Asia_Siberia <- Central_Asia_and_Siberia_SGDP$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_Central_Asia_Siberia, 
+    y = PC4_Central_Asia_Siberia, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'Central_Asia_Siberia')
+
+#West_Eurasia
+PC2_West_Eurasia <- West_Eurasia$PC2
+PC4_West_Eurasia <- West_Eurasia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_West_Eurasia, 
+    y = PC4_West_Eurasia, 
+    marker = list(
+      color = 'royalblue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'West_Eurasia')
+
+#------
+
+
+#ORIEN American Indian Alaska Native
+PC2_ORIEN_NAm <- ORIEN_NAm$PC2
+PC4_ORIEN_NAm <- ORIEN_NAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_NAm, 
+    y = PC4_ORIEN_NAm, 
+    marker = list(
+      color = 'salmon',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: American Indian or Alaska Native')
+
+#ORIEN Asian
+PC2_ORIEN_Asia <- ORIEN_Asia$PC2
+PC4_ORIEN_Asia <- ORIEN_Asia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_Asia, 
+    y = PC4_ORIEN_Asia, 
+    marker = list(
+      color = 'forestgreen',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Asian')
+
+#ORIEN African American/Black
+PC2_ORIEN_AfAm <- ORIEN_AfAm$PC2
+PC4_ORIEN_AfAm <- ORIEN_AfAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_AfAm, 
+    y = PC4_ORIEN_AfAm, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Black or African American')
+
+#ORIEN Hawaiian or Other Pacific Islander
+PC2_ORIEN_PacIsl <- ORIEN_PacIsl$PC2
+PC4_ORIEN_PacIsl <- ORIEN_PacIsl$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_PacIsl, 
+    y = PC4_ORIEN_PacIsl, 
+    marker = list(
+      color = 'darkblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Hawaiian or Other Pacific Islander')
+
+#ORIEN Not Reported/Unknown
+PC2_ORIEN_RaNR <- ORIEN_RaNR$PC2
+PC4_ORIEN_RaNR <- ORIEN_RaNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_RaNR, 
+    y = PC4_ORIEN_RaNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Race Unknown/Not Reported')
+
+#ORIEN White
+PC2_ORIEN_W <- ORIEN_W$PC2
+PC4_ORIEN_W <- ORIEN_W$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_W, 
+    y = PC4_ORIEN_W, 
+    marker = list(
+      color = 'darkred',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: White')
+
+#ORIEN Other Race
+PC2_ORIEN_OthRace <- ORIEN_OthRace$PC2
+PC4_ORIEN_OthRace <- ORIEN_OthRace$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_ORIEN_OthRace, 
+    y = PC4_ORIEN_OthRace, 
+    marker = list(
+      color = 'midnightblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN: Other Race')
+
+#TCGA American Indian Alaska Native
+PC2_TCGA_NAm <- TCGA_NAm$PC2
+PC4_TCGA_NAm <- TCGA_NAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_NAm, 
+    y = PC4_TCGA_NAm, 
+    marker = list(
+      color = 'lightpink',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: American Indian or Alaska Native')
+
+#TCGA Asian
+PC2_TCGA_Asia <- TCGA_Asia$PC2
+PC4_TCGA_Asia <- TCGA_Asia$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_Asia, 
+    y = PC4_TCGA_Asia, 
+    marker = list(
+      color = 'seagreen1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Asian')
+
+#TCGA African American/Black
+PC2_TCGA_AfAm <- TCGA_AfAm$PC2
+PC4_TCGA_AfAm <- TCGA_AfAm$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_AfAm, 
+    y = PC4_TCGA_AfAm, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Black or African American')
+
+#TCGA Hawaiian or Other Pacific Islander
+PC2_TCGA_PacIsl <- TCGA_PacIsl$PC2
+PC4_TCGA_PacIsl <- TCGA_PacIsl$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_PacIsl, 
+    y = PC4_TCGA_PacIsl, 
+    marker = list(
+      color = 'blueviolet',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Hawaiian or Other Pacific Islander')
+
+#TCGA Not Reported/Unknown
+PC2_TCGA_RaNR <- TCGA_RaNR$PC2
+PC4_TCGA_RaNR <- TCGA_RaNR$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_RaNR, 
+    y = PC4_TCGA_RaNR, 
+    marker = list(
+      color = 'gray48',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: Race Unknown/Not Reported')
+
+#TCGA White
+PC2_TCGA_W <- TCGA_W$PC2
+PC4_TCGA_W <- TCGA_W$PC4
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_TCGA_W, 
+    y = PC4_TCGA_W, 
+    marker = list(
+      color = 'crimson',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'TCGA: White')
+
+
+x <- list(
+  title = "PC2")
+y <- list(
+  title = "PC4")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_race_PC2v4.html")
+
+#OTHER COLORS
+  #deepskyblue
+  #royalblue
+```
