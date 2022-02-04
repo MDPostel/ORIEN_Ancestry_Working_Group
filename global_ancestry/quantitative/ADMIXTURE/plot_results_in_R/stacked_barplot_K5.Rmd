@@ -118,6 +118,11 @@ raw_fam <- raw_fam[,c(1,2)]
 names(raw_fam)[1] <- "WES_ID"
 raw_fam$order <- 1:nrow(raw_fam) 
 Q$order <- 1:nrow(Q) 
+
+write.csv(race, "ORIEN_TCGA_IDs_race.csv")
+write.csv(ethnicity, "ORIEN_TCGA_IDs_ethnicity.csv")
+write.csv(refpops2, "1000GP_HGDP_IDs_Pops.csv")
+
 HGDP_1000GP <- merge(x = raw_fam, y = refpops2, by="WES_ID")
 refs_numbered_ID_pop_Q <- cbind(raw_fam,Q)
 refs_numbered_ID_pop_Q <- merge(HGDP_1000GP, Q, by="order" )
@@ -882,7 +887,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -950,7 +956,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -1020,7 +1027,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -1090,7 +1098,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -1161,7 +1170,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -1231,7 +1241,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -1301,7 +1312,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -1376,7 +1388,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -1446,7 +1459,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
@@ -1516,7 +1530,8 @@ names(df)[7] <- "Q5 - AFR"
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
             variable.name="Ancestry", value.name="Fraction")
-
+```
+```{r}
 plot.new()            # Create empty plot in RStudios default window
 dev.new(width = 400,   # Create new plot window
         height = 600,
