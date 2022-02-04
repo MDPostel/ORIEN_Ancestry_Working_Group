@@ -1,0 +1,18 @@
+
+#define INFILE ../ORIEN_TCGA_1000GP_HGDP_STRUCTURE.recode.strct_in
+#define OUTFILE ORIEN_TCGA_1000GP_HGDP_STRUCTURE
+#define NUMREPS 1000
+#define MAXPOPS 8
+#define BURNIN 10000
+#define NUMLOCI 23954
+#define USEPOPINFO 0 #used to set to 1
+#define PFROMPOPFLAGONLY 1
+#define NUMINDS 25085
+#define LABEL 1
+#define MARKERNAMES 1
+#define POPDATA 0
+#define POPFLAG 1
+#define LOCDATA 0
+#define PHENOTYPE 0
+#define EXTRACOLS 0
+#define ONEROWPERIND 0

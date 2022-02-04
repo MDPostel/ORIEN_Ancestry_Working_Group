@@ -1,0 +1,1571 @@
+---
+title: "Admixture_Stacked_Barplot"
+output: html_notebook
+---
+
+Load libraries
+```{r}
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dplyr)
+library(data.table)
+library(tidyverse)
+library(plotly)
+library(plyr)
+library(stringi)
+```
+
+Read in reference population info from IGSR, race/ethnicity info from ORIEN and TCGA.
+```{r}
+
+clinlinkage <- read.csv("20PRJ071USC_20210928_ClinicalMolLinkage_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+key_SLID <- subset(clinlinkage, Tumor.Germline == "Germline")
+key_SLID2 <- key_SLID[,c(1,3)]
+demos <- read.csv("20PRJ071USC_20210928_PatientMaster_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+demos2 <- demos[,c(1,5,6)]
+names(key_SLID2)[names(key_SLID2 ) == "ORIENAvatarKey" ] <- "AvatarKey"
+merge <- merge(x = key_SLID2,y = demos2, by='AvatarKey', sort=FALSE, all=TRUE)
+names(merge)[names(merge ) == "WES" ] <- "WES_ID"
+merge2 <- merge[,c(2,3,4)]
+
+USC <-  read.csv("20211203_USC_ClinicalMolLinkage_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+names(USC)[names(USC ) == "ORIENAvatarKey" ] <- "key"
+key <- read.csv("V4_RecordKey_Jan2022.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+names(key)[names(key ) == "Avatar.Patient.ID" ] <- "key"
+key <- key[,c(4,6,7)]
+USC2 <- merge(x=USC, y=key, by="key")
+USC2 <- USC2[,c(4,21,22)]
+names(USC2)[names(USC2 ) == "WES" ] <- "WES_ID"
+all <- bind_rows(merge2,USC2)
+all <- all[-which(all$WES_ID == ""), ]
+
+all[all$Race == "Black",]$Race = "Black_or_African_American"
+all[all$Race == "Unknown/Not Reported",]$Race = "Unknown/Not_Reported"
+all[all$Race == "Other Asian, including Asian, NOS and Oriental, NOS",]$Race = "Asian"
+all[all$Race == "Filipino",]$Race = "Asian"
+all[all$Race == "Chinese",]$Race = "Asian"
+all[all$Race == "Korean",]$Race = "Asian"
+all[all$Race == "American Indian, Aleutian, or Eskimo (includes all indigenous populations of the Western Hemisphere)",]$Race = "American_Indian_or_Alaska_Native"
+all[all$Race == "American Indian, Aleutian, or Eskimo (includes all indigenous populations of the Western hemisphere)",]$Race = "American_Indian_or_Alaska_Native"
+all[all$Race == "Asian Indian or Pakistani, NOS",]$Race = "Asian"
+all[all$Race == "Asian Indian",]$Race = "Asian"
+all[all$Race == "Vietnamese",]$Race = "Asian"
+all[all$Race == "Japanese",]$Race = "Asian"
+all[all$Race == "Pacific Islander, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Unknown/Not Applicable",]$Race = "Unknown/Not_Reported"
+all[all$Race == "Hawaiian",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Laotian",]$Race = "Asian"
+all[all$Race == "Pakistani",]$Race = "Asian"
+all[all$Race == "Kampuchean (Cambodian)",]$Race = "Asian"
+all[all$Race == "Polynesian, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Thai",]$Race = "Asian"
+all[all$Race == "Guamanian, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+
+all[all$Ethnicity == "Non-Spanish; Non-Hispanic",]$Ethnicity = "Not_Hispanic/Not_Latino" 
+all[all$Ethnicity == "Spanish, NOS; Hispanic, NOS; Latino, NOS",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Unknown/Not Reported",]$Ethnicity = "Unknown/Not_Reported"
+all[all$Ethnicity == "Mexican (includes Chicano)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "South or Central American (except Brazil)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Puerto Rican",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Unknown/Not Applicable",]$Ethnicity = "Unknown/Not_Reported"
+all[all$Ethnicity == "Cuban",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Other specified Spanish/Hispanic origin (includes European; excludes Dominican Republic)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Spanish surname only",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Dominican Republic",]$Ethnicity = "Hispanic/Latino"
+
+
+TCGA_race <- read.csv("TCGA_vcfIDs_race_uniq_final.tsv", sep = "\t", header = FALSE, stringsAsFactors = FALSE, fill = TRUE)
+TCGA_ethnicity <- read.csv("TCGA_vcfIDs_ethnicity_uniq_final.tsv", sep = "\t", header = FALSE, stringsAsFactors = FALSE, fill = TRUE)
+names(TCGA_race)[2] <- "Race"
+names(TCGA_ethnicity)[2] <- "Ethnicity"
+names(TCGA_race)[1] <- "WES_ID"
+names(TCGA_ethnicity)[1] <- "WES_ID"
+TCGA <- merge(x = TCGA_race, y = TCGA_ethnicity, by="WES_ID")
+
+merge5 <- bind_rows(TCGA,all)
+
+race <- merge5[,c(1,2)]
+names(race)[names(race) == "Race"] <- "pop"
+ethnicity <- merge5[,c(1,3)]
+names(ethnicity)[names(ethnicity) == "Ethnicity"] <- "pop"
+
+str_replace(race$WES_ID, "_st_g", "")
+str_replace(ethnicity$WES_ID, "_st_g", "")
+
+# https://www.internationalgenome.org/data-portal/data-collection/30x-grch38
+# https://www.internationalgenome.org/data-portal/data-collection/hgdp
+
+#refpops <- read.table("igsr_samples3.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+refpops_HGDP <- read.table("igsr-human genome diversity project.tsv.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+refpops_1000GP <- read.table("igsr-1000 genomes 30x on grch38.tsv.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+
+refpops_HGDP2 <- refpops_HGDP[,c(1,7)]
+refpops_1000GP2 <- refpops_1000GP[,c(1,7)]
+refpops2 <- rbind(refpops_HGDP2,refpops_1000GP2)
+names(refpops2)[names(refpops2) == "Sample.name"] <- "WES_ID"
+names(refpops2)[names(refpops2) == "Superpopulation.name"] <- "pop"
+
+```
+
+Standardize/harmonize and combine fam + Q + pop info
+```{r}
+Q <- read.table("isec.5.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam <- read.table("isec.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+raw_fam$V1 <- sub("_st_g", "", raw_fam$V1)
+
+raw_fam <- raw_fam[,c(1,2)]
+names(raw_fam)[1] <- "WES_ID"
+raw_fam$order <- 1:nrow(raw_fam) 
+Q$order <- 1:nrow(Q) 
+HGDP_1000GP <- merge(x = raw_fam, y = refpops2, by="WES_ID")
+refs_numbered_ID_pop_Q <- cbind(raw_fam,Q)
+refs_numbered_ID_pop_Q <- merge(HGDP_1000GP, Q, by="order" )
+refs_numbered_ID_pop_Q <- refs_numbered_ID_pop_Q[,c(1,2,4:9)]
+names(refs_numbered_ID_pop_Q)[4] <- "Q1"
+names(refs_numbered_ID_pop_Q)[5] <- "Q2"
+names(refs_numbered_ID_pop_Q)[6] <- "Q3"
+names(refs_numbered_ID_pop_Q)[7] <- "Q4"
+names(refs_numbered_ID_pop_Q)[8] <- "Q5"
+
+Race <- merge(x = raw_fam, y = race, by="WES_ID")
+samples_numbered_ID_race_Q <- cbind(raw_fam,Q)
+samples_numbered_ID_race_Q <- merge(Race, Q, by="order" )
+samples_numbered_ID_race_Q <- samples_numbered_ID_race_Q[,c(1,2,4:9)]
+names(samples_numbered_ID_race_Q)[4] <- "Q1"
+names(samples_numbered_ID_race_Q)[5] <- "Q2"
+names(samples_numbered_ID_race_Q)[6] <- "Q3"
+names(samples_numbered_ID_race_Q)[7] <- "Q4"
+names(samples_numbered_ID_race_Q)[8] <- "Q5"
+
+Ethnicity <- merge(x = raw_fam, y = ethnicity, by="WES_ID")
+samples_numbered_ID_ethnicity_Q <- cbind(raw_fam,Q)
+samples_numbered_ID_ethnicity_Q <- merge(Ethnicity, Q, by="order" )
+samples_numbered_ID_ethnicity_Q <- samples_numbered_ID_ethnicity_Q[,c(1,2,4:9)]
+names(samples_numbered_ID_ethnicity_Q)[4] <- "Q1"
+names(samples_numbered_ID_ethnicity_Q)[5] <- "Q2"
+names(samples_numbered_ID_ethnicity_Q)[6] <- "Q3"
+names(samples_numbered_ID_ethnicity_Q)[7] <- "Q4"
+names(samples_numbered_ID_ethnicity_Q)[8] <- "Q5"
+
+European <- subset(refs_numbered_ID_pop_Q, pop == "European Ancestry")
+European_West_Eurasia_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "European Ancestry,West Eurasia (SGDP)")
+East_Asian <- subset(refs_numbered_ID_pop_Q, pop == "East Asian Ancestry")
+American <- subset(refs_numbered_ID_pop_Q, pop == "American Ancestry")
+South_Asian <- subset(refs_numbered_ID_pop_Q, pop == "South Asian Ancestry")
+African <- subset(refs_numbered_ID_pop_Q, pop == "African Ancestry")
+South_Asian_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),South Asian Ancestry")
+African_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "African Ancestry,Africa (SGDP)")
+East_Asian_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (SGDP),East Asian Ancestry")
+Central_South_Asia <- subset(refs_numbered_ID_pop_Q, pop == "Central South Asia (HGDP)")
+Africa_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Africa (HGDP)")
+Oceania_HGDP_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (SGDP),Oceania (HGDP)")
+Middle_East_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Middle East (HGDP)")
+Europe_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Europe (HGDP)")
+East_Asian_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (HGDP)")
+Oceania_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (HGDP)")
+America_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (HGDP)")
+Central_Asia_and_Siberia_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Central Asia and Siberia (SGDP)")
+East_Asian_SGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (SGDP)")
+Middle_East_HGDP_Africa_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Middle East (HGDP),Africa (SGDP)")
+West_Eurasia <- subset(refs_numbered_ID_pop_Q, pop == "West Eurasia (SGDP)")
+African_SGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "Africa (SGDP)")
+Oceania_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (SGDP)")
+America_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (SGDP)")
+South_Asia_SGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),Central South Asia (HGDP)")
+South_Asia_SGDP_Central_South_Asia_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),Central South Asia (HGDP)")
+America_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (SGDP),America (HGDP)")
+East_Asian_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (SGDP),East Asia (HGDP)")
+African_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Africa (SGDP),Africa (HGDP)")
+
+EUR <- rbind.fill(European, European_West_Eurasia_SGDP, Europe_HGDP)
+AFR <- rbind.fill(Africa_HGDP, African, African_SGDP, African_SGDP_HGDP, African_SGDP2)
+AMR <- rbind.fill(America_HGDP, America_SGDP, America_SGDP_HGDP, American)
+SAS <- rbind.fill(South_Asian, South_Asian_SGDP, Central_South_Asia, South_Asia_SGDP2, South_Asia_SGDP_Central_South_Asia_HGDP)
+EAS <- rbind.fill(East_Asian, East_Asian_HGDP, East_Asian_SGDP, East_Asian_SGDP2, East_Asian_SGDP_HGDP)
+OCE <- rbind.fill(Oceania_HGDP, Oceania_HGDP_SGDP, Oceania_SGDP)
+MDE <- rbind.fill(Middle_East_HGDP, Middle_East_HGDP_Africa_SGDP)
+
+EUR <- EUR[,c(2:8)]
+EUR[EUR$pop == "European Ancestry",]$pop = "EUR"
+EUR[EUR$pop == "Europe (HGDP)",]$pop = "EUR"
+EUR[EUR$pop == "European Ancestry,West Eurasia (SGDP)",]$pop = "EUR"
+AFR <- AFR[,c(2:8)]
+AFR[AFR$pop == "Africa (HGDP)",]$pop = "AFR"
+AFR[AFR$pop == "African Ancestry",]$pop = "AFR"
+AFR[AFR$pop == "African Ancestry,Africa (SGDP)",]$pop = "AFR"
+AMR <- AMR[,c(2:8)]
+AMR[AMR$pop == "America (HGDP)",]$pop = "AMR"
+AMR[AMR$pop == "American Ancestry",]$pop = "AMR"
+SAS <- SAS[,c(2:8)]
+SAS[SAS$pop == "South Asian Ancestry",]$pop = "SAS"
+SAS[SAS$pop == "Central South Asia (HGDP)",]$pop = "SAS"
+SAS[SAS$pop == "South Asia (SGDP),South Asian Ancestry",]$pop = "SAS"
+EAS <- EAS[,c(2:8)]
+EAS[EAS$pop == "East Asian Ancestry",]$pop = "EAS"
+EAS[EAS$pop == "East Asia (SGDP),East Asian Ancestry",]$pop = "EAS"
+EAS[EAS$pop == "East Asia (HGDP)",]$pop = "EAS"
+OCE <- OCE[,c(2:8)]
+OCE[OCE$pop == "Oceania (HGDP)",]$pop = "OCE"
+OCE[OCE$pop == "Oceania (SGDP),Oceania (HGDP)",]$pop = "OCE"
+MDE <- MDE[,c(2:8)]
+MDE[MDE$pop == "Middle East (HGDP)",]$pop = "MDE"
+```
+```{r}
+White <- subset(samples_numbered_ID_race_Q, pop == "White")
+```
+```{r}
+Asian <- subset(samples_numbered_ID_race_Q, pop == "Asian")     
+```
+```{r}
+Black <- subset(samples_numbered_ID_race_Q, pop == "Black_or_African_American")            
+```
+```{r}
+Other <- subset(samples_numbered_ID_race_Q, pop == "Other")    
+```
+```{r}
+PacIsl <- subset(samples_numbered_ID_race_Q, pop == "Hawaiian_or_Other_Pacific_Islander")
+```
+```{r}
+AIAN <- subset(samples_numbered_ID_race_Q, pop == "American_Indian_or_Alaska_Native")
+```
+```{r}
+UK1 <- subset(samples_numbered_ID_race_Q, pop == "Unknown/Not_Reported")
+```
+```{r}
+UK2 <- subset(samples_numbered_ID_race_Q, pop == "Unknown")
+```
+```{r}
+UKrace <- rbind(UK1,UK2)       
+```
+```{r}
+NHL <- subset(samples_numbered_ID_ethnicity_Q, pop == "Not_Hispanic/Not_Latino")
+HL <- subset(samples_numbered_ID_ethnicity_Q, pop == "Hispanic/Latino")            
+UK3 <- subset(samples_numbered_ID_ethnicity_Q, pop == "Unknown/Not_Reported")     
+UK4 <- subset(samples_numbered_ID_ethnicity_Q, pop == "Unknown") 
+UKeth <- rbind(UK3,UK4)
+```
+
+1) Reference populations:
+
+AFR
+```{r}
+df <- AFR
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+```
+```{r}
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_AFR_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+AMR
+```{r}
+df <- AMR
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+```
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_AMR_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+#CAS
+```{r}
+df <- CAS
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+```
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_CAS_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+EAS
+```{r}
+df <- EAS
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+```
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_EAS_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+EUR
+```{r}
+df <- EUR
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+```
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_EUR_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+MDE
+```{r}
+df <- MDE
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+```
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_MDE_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+OCE
+```{r}
+df <- OCE
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+```
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_OCE_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+SAS
+```{r}
+df <- SAS
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+```
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_SAS_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+#WEU
+```{r}
+df <- WEU
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "population"
+names(df)[3] <- "Q1"
+names(df)[4] <- "Q2"
+names(df)[5] <- "Q3"
+names(df)[6] <- "Q4"
+names(df)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ population, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_1000GP_and_HGDP_WEU_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+
+2) ORIEN +TCGA by self-reported race
+
+White
+```{r}
+df <- White
+df <- unique(df)
+df <- df[,c(2:8)]
+
+#df$sum=rowSums(cbind(df$`Q1 - EAS`,df$`Q2 - EUR`,df$`Q3 - AMR`,df$`Q4 - SAS`,df$`Q5 - AFR`),na.rm=TRUE)
+
+# Add id and self_ID_race label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_race"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_race, drop=TRUE, space="free") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+#   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=mdat$Ancestry) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_race_White_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+Black or African American
+```{r}
+df <- Black
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_race label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_race"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_race_Black_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+Asian
+```{r}
+df <- Asian
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_race label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_race"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_race_Asian_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+American Indian or Alaska Native
+```{r}
+df <- AIAN
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_race label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_race"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_race_AIAN_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+Hawaiian or Other Pacific Islander
+```{r}
+df <- PacIsl
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_race label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_race"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_race_PacIsl_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+Unknown
+```{r}
+df <- UKrace
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_race label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_race"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_race_Unknown_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+Other
+```{r}
+df <- Other
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_race label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_race"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_race_Other_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+check NAs!
+
+
+3) ORIEN +TCGA by self-reported Ethnicity
+
+Hispanic/Latino
+```{r}
+df <- HL
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_ethnicity label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_ethnicity"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_ethnicity_HispanicLatino_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+Not Hispanic/Latino
+```{r}
+df <- NHL
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_ethnicity label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_ethnicity"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_ethnicity_NOTHispanicLatino_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+Unknown
+```{r}
+df <- UKethnicity
+df <- unique(df)
+df <- df[,c(2:8)]
+
+# Add id and self_ID_ethnicity label columns. Needed for reshape2::melting and plotting.
+names(df)[1] <- "ID"
+names(df)[2] <- "self_ID_ethnicity"
+names(df)[3] <- "Q1 - EAS"
+names(df)[4] <- "Q2 - EUR"
+names(df)[5] <- "Q3 - AMR"
+names(df)[6] <- "Q4 - SAS"
+names(df)[7] <- "Q5 - AFR"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
+#   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0))
+
+#col8 = c("crimson", "gold", "yellow", "forestgreen", "dodgerblue", "navyblue", "darkviolet", "hotpink")
+#names(col8) = levels(mdat$Ancestry)
+p
+# Customized stacked bar plot:
+# Sort ancestry order by overall 'abundance' of each ancestry.
+#mdat$Ancestry = factor(mdat$Ancestry, 
+#                       levels=names(sort(colSums(df[, 1:17]), decreasing=TRUE)))
+# Colors taken from:
+# https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20
+#col8 = c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+#          "#8c564b", "#e377c2", "#7f7f7f")
+#p2 = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#     geom_bar(stat="identity", position="fill", width=.5, colour="grey25") +
+#     facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free") +
+#     theme(panel.grid=element_blank()) +
+#     theme(panel.background=element_rect(fill=NA, colour="grey25")) +
+#     theme(panel.spacing.x=grid:::unit(0.5, "lines")) +
+#     theme(axis.title.x=element_blank()) +
+#     theme(axis.text.x=element_blank()) +
+#     theme(axis.ticks.x=element_blank()) +
+#     theme(strip.background=element_blank()) +
+#     theme(strip.text=element_text(size=12)) +
+#     theme(legend.key=element_rect(colour="grey25")) +
+#     scale_x_discrete(expand=c(0, 0)) +
+#     scale_y_continuous(expand=c(0, 0)) +
+#     scale_fill_manual(values=col8) +
+#     guides(fill=guide_legend(override.aes=list(colour=NULL)))
+
+png("bar_plots_ORIEN+TCGA_by_ethnicity_Unknown_K5.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+p
+dev.off()
+
+```
+
+check NAs!
+

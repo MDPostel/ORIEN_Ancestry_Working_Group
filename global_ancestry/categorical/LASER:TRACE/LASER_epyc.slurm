@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-#SBATCH --partition=epyc-64
+#SBATCH --partition=gpu
 #SBATCH --mem=220G
 #SBATCH --cpus-per-task=11
 #SBATCH --ntasks=20
@@ -11,24 +11,45 @@
 
 cd /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/AIMs
 module load usc bzip2 bcftools htslib vcftools
+#merge4=$(echo merge.recode.vcf.gz)
 t=$(echo 4000)
 ulimit -n 4001
 
+#from AIMs script:
+        #bcftools view $merge4 --force-samples -S HGDP_sample_names.txt --threads $t > HGDP_postmerge.vcf
+        #bcftools view $merge4 --force-samples -S ORIEN_sample_names.txt --threads $t > ORIEN_postmerge.vcf
+        #bcftools view $merge4 --force-samples -S 1000GP_sample_names.txt --threads $t > 1000GP_postmerge.vcf
+        #bcftools view $merge4 --force-samples -S TCGA_sample_names.txt --threads $t > TCGA_postmerge.vcf
+        #bgzip HGDP_postmerge.vcf; tabix -f HGDP_postmerge.vcf.gz
+        #bgzip ORIEN_postmerge.vcf; tabix -f ORIEN_postmerge.vcf.gz
+        #bgzip 1000GP_postmerge.vcf; tabix -f 1000GP_postmerge.vcf.gz
+        #bgzip TCGA_postmerge.vcf; tabix -f TCGA_postmerge.vcf.gz
+        #cat HGDP_sample_names.txt > HGDP_1000GP_samples.txt
+        #cat 1000GP_sample_names.txt >> HGDP_1000GP_samples.txt
+        #bcftools view $merge4 --force-samples -S HGDP_1000GP_samples.txt --threads $t -Oz -o HGDP_1000GP.vcf.gz
+        #tabix -f HGDP_1000GP.vcf.gz
 HGDP=$(echo HGDP.vcf.gz)
 ORIEN=$(echo ORIEN.vcf.gz)
 GP1000=$(echo 1000GP.vcf.gz)
 TCGA=$(echo TCGA.vcf.gz)
 
-bcftools merge $ORIEN $TCGA --threads 4000 -Oz -o ORIEN_TCGA.vcf.gz
-tabix -f ORIEN_TCGA.vcf.gz
+#cat ORIEN_sample_names.txt > ORIEN_TCGA_samples.txt
+#cat TCGA_sample_names.txt >> ORIEN_TCGA_samples.txt
+#bcftools view $merge4 --force-samples -S ORIEN_TCGA_samples.txt --threads $t -Oz -o ORIEN_TCGA.vcf.gz
+#tabix -f ORIEN_TCGA.vcf.gz
+
+##refs=$(echo HGDP_1000GP.vcf.gz)
+#keep
+
+#bcftools merge $ORIEN $TCGA --threads 4000 -Oz -o ORIEN_TCGA.vcf.gz
+#tabix -f ORIEN_TCGA.vcf.gz
 
 #in trace.conf:
 #STUDY_FILE      ORIEN_TCGA_laser_samples.geno
 #GENO_FILE       1000GP_HGDP_laser_refs.geno
-#COORD_FILE      /project/davidwcr_788/ORIEN_Intermember_Project/ancestry_tests/LASER/epyc-64/laser.RefPC.coord
 
-/home1/mpostel/bin/LASER-2.04/vcf2geno/vcf2geno --inVcf ORIEN_TCGA.vcf.gz --out ORIEN_TCGA_laser_samples
-/home1/mpostel/bin/LASER-2.04/vcf2geno/vcf2geno --inVcf HGDP_1000GP.vcf.gz --out 1000GP_HGDP_laser_refs
+#/home1/mpostel/bin/LASER-2.04/vcf2geno/vcf2geno --inVcf ORIEN_TCGA.vcf.gz --out ORIEN_TCGA_laser_samples
+#/home1/mpostel/bin/LASER-2.04/vcf2geno/vcf2geno --inVcf HGDP_1000GP.vcf.gz --out 1000GP_HGDP_laser_refs
 
 cd /project/davidwcr_788/ORIEN_Intermember_Project/ancestry_tests/LASER/epyc-64
 
@@ -36,7 +57,6 @@ cd /project/davidwcr_788/ORIEN_Intermember_Project/ancestry_tests/LASER/epyc-64
 geno=$(echo /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/AIMs/1000GP_HGDP_laser_refs.geno)
 /home1/mpostel/bin/LASER-2.04/laser -g $geno -pca 1 -k 6
 
-#Run in parallel in one script or create multiple scripts that all reference the coord file made above
 /home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 1 -y 1250 -o results.1-1250 &
 /home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 1251 -y 2500 -o results.1251-2500 &
 /home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 2501 -y 3750 -o results.2501-3750 &
@@ -54,4 +74,6 @@ geno=$(echo /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset
 /home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 17501 -y 18750 -o results.17501-18750 &
 /home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 18751 -y 20000 -o results.18751-20000 &
 /home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 20001 -y 21250 -o results.20001-21250 &
-/home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 21251 -y 22500 -o results.21251-21608 &
+/home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 21251 -y 22500 -o results.21251-22500 &
+/home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 22501 -y 23750 -o results.22501-23750 &
+/home1/mpostel/bin/LASER-2.04/trace -p trace.conf -x 23751 -y 25085 -o results.23751-25085 &
