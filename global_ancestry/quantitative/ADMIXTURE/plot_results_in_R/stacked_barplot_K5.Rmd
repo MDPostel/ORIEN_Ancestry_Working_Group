@@ -250,6 +250,34 @@ UK3 <- subset(samples_numbered_ID_ethnicity_Q, pop == "Unknown/Not_Reported")
 UK4 <- subset(samples_numbered_ID_ethnicity_Q, pop == "Unknown") 
 UKeth <- rbind(UK3,UK4)
 ```
+```{r}
+write.csv(NHL, "IDs_ORIEN_TCGA_NHL_pop_Q.csv")
+write.csv(HL, "IDs_ORIEN_TCGA_HL_Q.csv")
+write.csv(UKeth, "IDs_ORIEN_UnknownEthnicity_race_Q.csv")
+write.csv(White, "IDs_ORIEN_TCGA_White_Q.csv")
+write.csv(Asian, "IDs_ORIEN_TCGA_Asian_Q.csv")
+write.csv(Black, "IDs_ORIEN_TCGA_Black_Q.csv")
+write.csv(Other, "IDs_ORIEN_TCGA_OtherRace_Q.csv")
+write.csv(PacIsl, "IDs_ORIEN_TCGA_PacificIslander_Q.csv")
+write.csv(AIAN, "IDs_ORIEN_TCGA_AmericanIndian_Q.csv")
+write.csv(UKrace, "IDs_ORIEN_TCGA_UnknownRace_Q.csv")
+
+write.csv(EUR, "IDs_HGDP_1000GP_EUR_Q.csv")
+write.csv(AFR, "IDs_HGDP_1000GP_AFR_Q.csv")
+write.csv(AMR, "IDs_HGDP_1000GP_AMR_Q.csv")
+write.csv(SAS, "IDs_HGDP_1000GP_SAS_Q.csv")
+write.csv(EAS, "IDs_HGDP_1000GP_EAS_Q.csv")
+write.csv(OCE, "IDs_HGDP_1000GP_OCE_Q.csv")
+write.csv(MDE, "IDs_HGDP_1000GP_MDE_Q.csv")
+
+NHL2 <- NHL[,c(2:8)]; HL2 <- HL[,c(2:8)]; UKeth2 <- UKeth[,c(2:8)]
+refs_pop_samples_ethnicity_Q <- rbind(NHL2, HL2, UKeth2, EUR, AFR, AMR, SAS, EAS, OCE, MDE)
+write.csv(refs_pop_samples_ethnicity_Q, "HGDP_1000GP_pops_ORIEN_TCGA_ethnicities_plusQ.csv")
+White2 <- White[,c(2:8)]; Asian2 <- Asian[,c(2:8)]; Black2 <- Black[,c(2:8)]; Other2 <- Other[,c(2:8)]; PacIsl2 <- PacIsl[,c(2:8)]; AIAN2 <- AIAN[,c(2:8)]; UKrace2 <- UKrace[,c(2:8)]
+refs_pop_samples_race_Q <- rbind(White2, Asian2, Black2, Other2, PacIsl2, AIAN2, UKrace2, EUR, AFR, AMR, SAS, EAS, OCE, MDE)
+write.csv(refs_pop_samples_ethnicity_Q, "HGDP_1000GP_pops_ORIEN_TCGA_races_plusQ.csv")
+
+```
 
 1) Reference populations:
 
