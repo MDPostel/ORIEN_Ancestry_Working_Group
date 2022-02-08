@@ -99,12 +99,10 @@ str_replace(ethnicity$WES_ID, "_st_g", "")
 #refpops <- read.table("igsr_samples3.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 refpops_HGDP <- read.table("igsr-human genome diversity project.tsv.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 refpops_1000GP <- read.table("igsr-1000 genomes 30x on grch38.tsv.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
-refpops_igsr <- read.table("igsr_samples3.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 
-refpops_igsr <- refpops_igsr[,c(1,7)]
 refpops_HGDP2 <- refpops_HGDP[,c(1,7)]
 refpops_1000GP2 <- refpops_1000GP[,c(1,7)]
-refpops2 <- unique(rbind(refpops_HGDP2,refpops_1000GP2,refpops_igsr))
+refpops2 <- rbind(refpops_HGDP2,refpops_1000GP2)
 names(refpops2)[names(refpops2) == "Sample.name"] <- "WES_ID"
 names(refpops2)[names(refpops2) == "Superpopulation.name"] <- "pop"
 
@@ -112,7 +110,7 @@ names(refpops2)[names(refpops2) == "Superpopulation.name"] <- "pop"
 
 Standardize/harmonize and combine fam + Q + pop info
 ```{r}
-Q <- read.table("isec.5.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+Q <- read.table("isec.7.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
 raw_fam <- read.table("isec.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
 raw_fam$V1 <- sub("_st_g", "", raw_fam$V1)
 
@@ -128,40 +126,38 @@ write.csv(refpops2, "1000GP_HGDP_IDs_Pops.csv")
 HGDP_1000GP <- merge(x = raw_fam, y = refpops2, by="WES_ID")
 refs_numbered_ID_pop_Q <- cbind(raw_fam,Q)
 refs_numbered_ID_pop_Q <- merge(HGDP_1000GP, Q, by="order" )
-refs_numbered_ID_pop_Q <- refs_numbered_ID_pop_Q[,c(1,2,4:9)]
+refs_numbered_ID_pop_Q <- refs_numbered_ID_pop_Q[,c(1,2,4:11)]
 names(refs_numbered_ID_pop_Q)[4] <- "Q1"
 names(refs_numbered_ID_pop_Q)[5] <- "Q2"
 names(refs_numbered_ID_pop_Q)[6] <- "Q3"
 names(refs_numbered_ID_pop_Q)[7] <- "Q4"
 names(refs_numbered_ID_pop_Q)[8] <- "Q5"
+names(refs_numbered_ID_pop_Q)[9] <- "Q6"
+names(refs_numbered_ID_pop_Q)[10] <- "Q7"
 
 Race <- merge(x = raw_fam, y = race, by="WES_ID")
 samples_numbered_ID_race_Q <- cbind(raw_fam,Q)
 samples_numbered_ID_race_Q <- merge(Race, Q, by="order" )
-samples_numbered_ID_race_Q <- samples_numbered_ID_race_Q[,c(1,2,4:9)]
+samples_numbered_ID_race_Q <- samples_numbered_ID_race_Q[,c(1,2,4:11)]
 names(samples_numbered_ID_race_Q)[4] <- "Q1"
 names(samples_numbered_ID_race_Q)[5] <- "Q2"
 names(samples_numbered_ID_race_Q)[6] <- "Q3"
 names(samples_numbered_ID_race_Q)[7] <- "Q4"
 names(samples_numbered_ID_race_Q)[8] <- "Q5"
+names(samples_numbered_ID_race_Q)[9] <- "Q6"
+names(samples_numbered_ID_race_Q)[10] <- "Q7"
 
 Ethnicity <- merge(x = raw_fam, y = ethnicity, by="WES_ID")
 samples_numbered_ID_ethnicity_Q <- cbind(raw_fam,Q)
 samples_numbered_ID_ethnicity_Q <- merge(Ethnicity, Q, by="order" )
-samples_numbered_ID_ethnicity_Q <- samples_numbered_ID_ethnicity_Q[,c(1,2,4:9)]
+samples_numbered_ID_ethnicity_Q <- samples_numbered_ID_ethnicity_Q[,c(1,2,4:11)]
 names(samples_numbered_ID_ethnicity_Q)[4] <- "Q1"
 names(samples_numbered_ID_ethnicity_Q)[5] <- "Q2"
 names(samples_numbered_ID_ethnicity_Q)[6] <- "Q3"
 names(samples_numbered_ID_ethnicity_Q)[7] <- "Q4"
 names(samples_numbered_ID_ethnicity_Q)[8] <- "Q5"
-
-write.csv(unique(refs_numbered_ID_pop_Q), "refs_numbered_ID_pop_Q.csv")
-write.csv(unique(samples_numbered_ID_race_Q), "samples_numbered_ID_race_Q.csv")
-write.csv(unique(samples_numbered_ID_ethnicity_Q), "samples_numbered_ID_ethnicity_Q.csv")
-
-temp <- merge(refs_numbered_ID_pop_Q, raw_fam, by= "WES_ID", all = TRUE)
-temp <- temp[,c(10,9,3)]
-write.csv(temp,"admixture_supervised.csv")
+names(samples_numbered_ID_ethnicity_Q)[9] <- "Q6"
+names(samples_numbered_ID_ethnicity_Q)[10] <- "Q7"
 
 European <- subset(refs_numbered_ID_pop_Q, pop == "European Ancestry")
 European_West_Eurasia_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "European Ancestry,West Eurasia (SGDP)")
@@ -201,29 +197,29 @@ EAS <- rbind.fill(East_Asian, East_Asian_HGDP, East_Asian_SGDP, East_Asian_SGDP2
 OCE <- rbind.fill(Oceania_HGDP, Oceania_HGDP_SGDP, Oceania_SGDP)
 MDE <- rbind.fill(Middle_East_HGDP, Middle_East_HGDP_Africa_SGDP)
 
-EUR <- EUR[,c(2:8)]
+EUR <- EUR[,c(2:10)]
 EUR[EUR$pop == "European Ancestry",]$pop = "EUR"
 EUR[EUR$pop == "Europe (HGDP)",]$pop = "EUR"
 EUR[EUR$pop == "European Ancestry,West Eurasia (SGDP)",]$pop = "EUR"
-AFR <- AFR[,c(2:8)]
+AFR <- AFR[,c(2:10)]
 AFR[AFR$pop == "Africa (HGDP)",]$pop = "AFR"
 AFR[AFR$pop == "African Ancestry",]$pop = "AFR"
 AFR[AFR$pop == "African Ancestry,Africa (SGDP)",]$pop = "AFR"
-AMR <- AMR[,c(2:8)]
+AMR <- AMR[,c(2:10)]
 AMR[AMR$pop == "America (HGDP)",]$pop = "AMR"
 AMR[AMR$pop == "American Ancestry",]$pop = "AMR"
-SAS <- SAS[,c(2:8)]
+SAS <- SAS[,c(2:10)]
 SAS[SAS$pop == "South Asian Ancestry",]$pop = "SAS"
 SAS[SAS$pop == "Central South Asia (HGDP)",]$pop = "SAS"
 SAS[SAS$pop == "South Asia (SGDP),South Asian Ancestry",]$pop = "SAS"
-EAS <- EAS[,c(2:8)]
+EAS <- EAS[,c(2:10)]
 EAS[EAS$pop == "East Asian Ancestry",]$pop = "EAS"
 EAS[EAS$pop == "East Asia (SGDP),East Asian Ancestry",]$pop = "EAS"
 EAS[EAS$pop == "East Asia (HGDP)",]$pop = "EAS"
-OCE <- OCE[,c(2:8)]
+OCE <- OCE[,c(2:10)]
 OCE[OCE$pop == "Oceania (HGDP)",]$pop = "OCE"
 OCE[OCE$pop == "Oceania (SGDP),Oceania (HGDP)",]$pop = "OCE"
-MDE <- MDE[,c(2:8)]
+MDE <- MDE[,c(2:10)]
 MDE[MDE$pop == "Middle East (HGDP)",]$pop = "MDE"
 ```
 ```{r}
@@ -261,31 +257,31 @@ UK4 <- unique(subset(samples_numbered_ID_ethnicity_Q, pop == "Unknown"))
 UKeth <- unique(rbind(UK3,UK4))
 ```
 ```{r}
-write.csv(NHL, "IDs_ORIEN_TCGA_NHL_pop_Q_K5.csv")
-write.csv(HL, "IDs_ORIEN_TCGA_HL_Q_K5.csv")
-write.csv(UKeth, "IDs_ORIEN_UnknownEthnicity_race_Q_K5.csv")
-write.csv(White, "IDs_ORIEN_TCGA_White_Q_K5.csv")
-write.csv(Asian, "IDs_ORIEN_TCGA_Asian_Q_K5.csv")
-write.csv(Black, "IDs_ORIEN_TCGA_Black_Q_K5.csv")
-write.csv(Other, "IDs_ORIEN_TCGA_OtherRace_Q_K5.csv")
-write.csv(PacIsl, "IDs_ORIEN_TCGA_PacificIslander_Q_K5.csv")
-write.csv(AIAN, "IDs_ORIEN_TCGA_AmericanIndian_Q_K5.csv")
-write.csv(UKrace, "IDs_ORIEN_TCGA_UnknownRace_Q_K5.csv")
+write.csv(NHL, "IDs_ORIEN_TCGA_NHL_pop_Q_K7.csv")
+write.csv(HL, "IDs_ORIEN_TCGA_HL_Q_K7.csv")
+write.csv(UKeth, "IDs_ORIEN_UnknownEthnicity_race_Q_K7.csv")
+write.csv(White, "IDs_ORIEN_TCGA_White_Q_K7.csv")
+write.csv(Asian, "IDs_ORIEN_TCGA_Asian_Q_K7.csv")
+write.csv(Black, "IDs_ORIEN_TCGA_Black_Q_K7.csv")
+write.csv(Other, "IDs_ORIEN_TCGA_OtherRace_Q_K7.csv")
+write.csv(PacIsl, "IDs_ORIEN_TCGA_PacificIslander_Q_K7.csv")
+write.csv(AIAN, "IDs_ORIEN_TCGA_AmericanIndian_Q_K7.csv")
+write.csv(UKrace, "IDs_ORIEN_TCGA_UnknownRace_Q_K7.csv")
 
-write.csv(EUR, "IDs_HGDP_1000GP_EUR_Q_K5.csv")
-write.csv(AFR, "IDs_HGDP_1000GP_AFR_Q_K5.csv")
-write.csv(AMR, "IDs_HGDP_1000GP_AMR_Q_K5.csv")
-write.csv(SAS, "IDs_HGDP_1000GP_SAS_Q_K5.csv")
-write.csv(EAS, "IDs_HGDP_1000GP_EAS_Q_K5.csv")
-write.csv(OCE, "IDs_HGDP_1000GP_OCE_Q_K5.csv")
-write.csv(MDE, "IDs_HGDP_1000GP_MDE_Q_K5.csv")
+write.csv(EUR, "IDs_HGDP_1000GP_EUR_Q_K7.csv")
+write.csv(AFR, "IDs_HGDP_1000GP_AFR_Q_K7.csv")
+write.csv(AMR, "IDs_HGDP_1000GP_AMR_Q_K7.csv")
+write.csv(SAS, "IDs_HGDP_1000GP_SAS_Q_K7.csv")
+write.csv(EAS, "IDs_HGDP_1000GP_EAS_Q_K7.csv")
+write.csv(OCE, "IDs_HGDP_1000GP_OCE_Q_K7.csv")
+write.csv(MDE, "IDs_HGDP_1000GP_MDE_Q_K7.csv")
 
-NHL2 <- NHL[,c(2:8)]; HL2 <- HL[,c(2:8)]; UKeth2 <- UKeth[,c(2:8)]
+NHL2 <- NHL[,c(2:10)]; HL2 <- HL[,c(2:10)]; UKeth2 <- UKeth[,c(2:10)]
 refs_pop_samples_ethnicity_Q <- rbind(NHL2, HL2, UKeth2, EUR, AFR, AMR, SAS, EAS, OCE, MDE)
-write.csv(refs_pop_samples_ethnicity_Q, "HGDP_1000GP_pops_ORIEN_TCGA_ethnicities_plusQ_K5.csv")
-White2 <- White[,c(2:8)]; Asian2 <- Asian[,c(2:8)]; Black2 <- Black[,c(2:8)]; Other2 <- Other[,c(2:8)]; PacIsl2 <- PacIsl[,c(2:8)]; AIAN2 <- AIAN[,c(2:8)]; UKrace2 <- UKrace[,c(2:8)]
+write.csv(refs_pop_samples_ethnicity_Q, "HGDP_1000GP_pops_ORIEN_TCGA_ethnicities_plusQ_K7.csv")
+White2 <- White[,c(2:10)]; Asian2 <- Asian[,c(2:10)]; Black2 <- Black[,c(2:10)]; Other2 <- Other[,c(2:10)]; PacIsl2 <- PacIsl[,c(2:10)]; AIAN2 <- AIAN[,c(2:10)]; UKrace2 <- UKrace[,c(2:10)]
 refs_pop_samples_race_Q <- rbind(White2, Asian2, Black2, Other2, PacIsl2, AIAN2, UKrace2, EUR, AFR, AMR, SAS, EAS, OCE, MDE)
-write.csv(refs_pop_samples_ethnicity_Q, "HGDP_1000GP_pops_ORIEN_TCGA_races_plusQ_K5.csv")
+write.csv(refs_pop_samples_ethnicity_Q, "HGDP_1000GP_pops_ORIEN_TCGA_races_plusQ_K7.csv")
 
 ```
 
