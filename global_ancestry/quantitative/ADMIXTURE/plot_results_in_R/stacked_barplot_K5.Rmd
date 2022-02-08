@@ -126,9 +126,9 @@ write.csv(ethnicity, "ORIEN_TCGA_IDs_ethnicity.csv")
 write.csv(refpops2, "1000GP_HGDP_IDs_Pops.csv")
 
 HGDP_1000GP <- merge(x = raw_fam, y = refpops2, by="WES_ID")
-refs_numbered_ID_pop_Q <- cbind(raw_fam,Q)
+HGDP_1000GP <- HGDP_1000GP[,c(3,1,4)]
+#refs_numbered_ID_pop_Q <- cbind(raw_fam,Q)
 refs_numbered_ID_pop_Q <- merge(HGDP_1000GP, Q, by="order" )
-refs_numbered_ID_pop_Q <- refs_numbered_ID_pop_Q[,c(1,2,4:9)]
 names(refs_numbered_ID_pop_Q)[4] <- "Q1"
 names(refs_numbered_ID_pop_Q)[5] <- "Q2"
 names(refs_numbered_ID_pop_Q)[6] <- "Q3"
@@ -159,72 +159,102 @@ write.csv(unique(refs_numbered_ID_pop_Q), "refs_numbered_ID_pop_Q.csv")
 write.csv(unique(samples_numbered_ID_race_Q), "samples_numbered_ID_race_Q.csv")
 write.csv(unique(samples_numbered_ID_ethnicity_Q), "samples_numbered_ID_ethnicity_Q.csv")
 
-temp <- merge(refs_numbered_ID_pop_Q, raw_fam, by= "WES_ID", all = TRUE)
-temp <- temp[,c(10,9,3)]
-write.csv(temp,"admixture_supervised.csv")
-
 European <- subset(refs_numbered_ID_pop_Q, pop == "European Ancestry")
 European_West_Eurasia_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "European Ancestry,West Eurasia (SGDP)")
-East_Asian <- subset(refs_numbered_ID_pop_Q, pop == "East Asian Ancestry")
-American <- subset(refs_numbered_ID_pop_Q, pop == "American Ancestry")
-South_Asian <- subset(refs_numbered_ID_pop_Q, pop == "South Asian Ancestry")
-African <- subset(refs_numbered_ID_pop_Q, pop == "African Ancestry")
-South_Asian_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),South Asian Ancestry")
-African_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "African Ancestry,Africa (SGDP)")
-East_Asian_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (SGDP),East Asian Ancestry")
-Central_South_Asia <- subset(refs_numbered_ID_pop_Q, pop == "Central South Asia (HGDP)")
-Africa_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Africa (HGDP)")
-Oceania_HGDP_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (SGDP),Oceania (HGDP)")
-Middle_East_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Middle East (HGDP)")
 Europe_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Europe (HGDP)")
+EUR <- rbind.fill(European, European_West_Eurasia_SGDP, Europe_HGDP)
+
+East_Asian <- subset(refs_numbered_ID_pop_Q, pop == "East Asian Ancestry")
+East_Asian_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (SGDP),East Asian Ancestry")
 East_Asian_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (HGDP)")
-Oceania_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (HGDP)")
-America_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (HGDP)")
-Central_Asia_and_Siberia_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Central Asia and Siberia (SGDP)")
 East_Asian_SGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (SGDP)")
+East_Asian_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (SGDP),East Asia (HGDP)")
+EAS <- rbind.fill(East_Asian, East_Asian_HGDP, East_Asian_SGDP, East_Asian_SGDP2, East_Asian_SGDP_HGDP)
+
+American <- subset(refs_numbered_ID_pop_Q, pop == "American Ancestry")
+America_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (HGDP)")
+America_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (SGDP)")
+America_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (SGDP),America (HGDP)")
+AMR <- rbind.fill(America_HGDP, America_SGDP, America_SGDP_HGDP, American)
+
+South_Asian <- subset(refs_numbered_ID_pop_Q, pop == "South Asian Ancestry")
+South_Asia_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),South Asian Ancestry")
+Central_South_Asia <- subset(refs_numbered_ID_pop_Q, pop == "Central South Asia (HGDP)")
+South_Asia_SGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),Central South Asia (HGDP)")
+South_Asia_SGDP3 <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP)")
+South_Asia_SGDP_Central_South_Asia_HGDP1 <- subset(refs_numbered_ID_pop_Q, pop == "Central South Asia (HGDP)")
+South_Asia_SGDP_Central_South_Asia_HGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),Central South Asia (HGDP)")
+SAS <- rbind.fill(South_Asian, South_Asia_SGDP, Central_South_Asia, South_Asia_SGDP2, South_Asia_SGDP3, South_Asia_SGDP_Central_South_Asia_HGDP1,South_Asia_SGDP_Central_South_Asia_HGDP2)
+
+African <- subset(refs_numbered_ID_pop_Q, pop == "African Ancestry")
+African_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "African Ancestry,Africa (SGDP)")
+Africa_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Africa (HGDP)")
+African_SGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "Africa (SGDP)")
+African_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Africa (SGDP),Africa (HGDP)")
+AFR <- rbind.fill(Africa_HGDP, African, African_SGDP, African_SGDP_HGDP, African_SGDP2)
+
+Oceania_HGDP_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (SGDP),Oceania (HGDP)")
+Oceania_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (HGDP)")
+Oceania_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (SGDP)")
+OCE <- rbind.fill(Oceania_HGDP, Oceania_HGDP_SGDP, Oceania_SGDP)
+
+Middle_East_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Middle East (HGDP)")
 Middle_East_HGDP_Africa_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Middle East (HGDP),Africa (SGDP)")
 West_Eurasia <- subset(refs_numbered_ID_pop_Q, pop == "West Eurasia (SGDP)")
-African_SGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "Africa (SGDP)")
-Oceania_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Oceania (SGDP)")
-America_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (SGDP)")
-South_Asia_SGDP2 <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),Central South Asia (HGDP)")
-South_Asia_SGDP_Central_South_Asia_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "South Asia (SGDP),Central South Asia (HGDP)")
-America_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "America (SGDP),America (HGDP)")
-East_Asian_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "East Asia (SGDP),East Asia (HGDP)")
-African_SGDP_HGDP <- subset(refs_numbered_ID_pop_Q, pop == "Africa (SGDP),Africa (HGDP)")
+MDE <- rbind.fill(Middle_East_HGDP, Middle_East_HGDP_Africa_SGDP, West_Eurasia)
 
-EUR <- rbind.fill(European, European_West_Eurasia_SGDP, Europe_HGDP)
-AFR <- rbind.fill(Africa_HGDP, African, African_SGDP, African_SGDP_HGDP, African_SGDP2)
-AMR <- rbind.fill(America_HGDP, America_SGDP, America_SGDP_HGDP, American)
-SAS <- rbind.fill(South_Asian, South_Asian_SGDP, Central_South_Asia, South_Asia_SGDP2, South_Asia_SGDP_Central_South_Asia_HGDP)
-EAS <- rbind.fill(East_Asian, East_Asian_HGDP, East_Asian_SGDP, East_Asian_SGDP2, East_Asian_SGDP_HGDP)
-OCE <- rbind.fill(Oceania_HGDP, Oceania_HGDP_SGDP, Oceania_SGDP)
-MDE <- rbind.fill(Middle_East_HGDP, Middle_East_HGDP_Africa_SGDP)
+Central_Asia_and_Siberia_SGDP <- subset(refs_numbered_ID_pop_Q, pop == "Central Asia and Siberia (SGDP)")
 
 EUR <- EUR[,c(2:8)]
 EUR[EUR$pop == "European Ancestry",]$pop = "EUR"
 EUR[EUR$pop == "Europe (HGDP)",]$pop = "EUR"
 EUR[EUR$pop == "European Ancestry,West Eurasia (SGDP)",]$pop = "EUR"
+
 AFR <- AFR[,c(2:8)]
 AFR[AFR$pop == "Africa (HGDP)",]$pop = "AFR"
 AFR[AFR$pop == "African Ancestry",]$pop = "AFR"
 AFR[AFR$pop == "African Ancestry,Africa (SGDP)",]$pop = "AFR"
+AFR[AFR$pop == "Africa (SGDP)",]$pop = "AFR"
+AFR[AFR$pop == "Africa (SGDP),Africa (HGDP)",]$pop = "AFR"
+
 AMR <- AMR[,c(2:8)]
 AMR[AMR$pop == "America (HGDP)",]$pop = "AMR"
 AMR[AMR$pop == "American Ancestry",]$pop = "AMR"
+AMR[AMR$pop == "America (SGDP),America (HGDP)",]$pop = "AMR"
+AMR[AMR$pop == "America (SGDP)",]$pop = "AMR"
+
 SAS <- SAS[,c(2:8)]
 SAS[SAS$pop == "South Asian Ancestry",]$pop = "SAS"
 SAS[SAS$pop == "Central South Asia (HGDP)",]$pop = "SAS"
 SAS[SAS$pop == "South Asia (SGDP),South Asian Ancestry",]$pop = "SAS"
+SAS[SAS$pop == "South Asia (SGDP)",]$pop = "SAS"
+
 EAS <- EAS[,c(2:8)]
 EAS[EAS$pop == "East Asian Ancestry",]$pop = "EAS"
 EAS[EAS$pop == "East Asia (SGDP),East Asian Ancestry",]$pop = "EAS"
 EAS[EAS$pop == "East Asia (HGDP)",]$pop = "EAS"
+EAS[EAS$pop == "East Asia (SGDP)",]$pop = "EAS"
+
 OCE <- OCE[,c(2:8)]
 OCE[OCE$pop == "Oceania (HGDP)",]$pop = "OCE"
 OCE[OCE$pop == "Oceania (SGDP),Oceania (HGDP)",]$pop = "OCE"
+OCE[OCE$pop == "Oceania (SGDP)",]$pop = "OCE"
+
 MDE <- MDE[,c(2:8)]
 MDE[MDE$pop == "Middle East (HGDP)",]$pop = "MDE"
+MDE[MDE$pop == "West Eurasia (SGDP)",]$pop = "MDE"
+MDE[MDE$pop == "Middle East (HGDP),Africa (SGDP)",]$pop = "MDE"
+
+CAS <- Central_Asia_and_Siberia_SGDP[,c(2:8)]
+CAS[CAS$pop == "Central Asia and Siberia (SGDP)",]$pop = "CAS"
+
+temp2 <- rbind(EUR,AFR,AMR,SAS,EAS,MDE,OCE,CAS)
+raw_fam2 <- unique(raw_fam[,c(1,3)])
+temp3 <- merge (temp2,raw_fam2,by="WES_ID")
+temp3 <- unique(temp3[,c(8,1,2)])
+temp4 <- merge(temp3,raw_fam2,by="WES_ID", all = TRUE)
+temp4 <- temp4[,c(4,1,3)]
+write.csv(temp4,"admixture_supervised.pop")
 ```
 ```{r}
 White <- unique(subset(samples_numbered_ID_race_Q, pop == "White"))
