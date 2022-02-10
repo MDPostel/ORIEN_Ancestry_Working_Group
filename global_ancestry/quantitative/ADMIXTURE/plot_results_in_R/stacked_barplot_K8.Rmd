@@ -263,6 +263,14 @@ MDE[MDE$pop == "Middle East (HGDP),Africa (SGDP)",]$pop = "MDE"
 CAS[CAS$pop == "Central Asia and Siberia (SGDP)",]$pop = "CAS"
 
 ```
+
+```{r}
+refs <- rbind(EUR,AFR,AMR,EAS,SAS,OCE,MDE,CAS)
+refs <- unique(refs)
+write.csv(refs, "HGDP_1000GP_Q_K8.csv")
+```
+
+
 ```{r}
 White <- unique(subset(Race, pop == "White"))
 Asian <- unique(subset(Race, pop == "Asian"))
@@ -274,12 +282,19 @@ UK1 <- unique(subset(Race, pop == "Unknown/Not_Reported"))
 UK2 <- unique(subset(Race, pop == "Unknown"))
 UKrace <- unique(rbind(UK1,UK2))       
 
+Race2 <- rbind(White, Asian, Black, Other, PacIsl, AIAN, UKrace)
+write.csv(Race2, "ORIEN_TCGA_Q_K8_by_Race.csv")
+
 NHL <- unique(subset(Ethnicity, pop == "Not_Hispanic/Not_Latino"))
 HL <- unique(subset(Ethnicity, pop == "Hispanic/Latino"))            
 UK3 <- unique(subset(Ethnicity, pop == "Unknown/Not_Reported"))     
 UK4 <- unique(subset(Ethnicity, pop == "Unknown")) 
 UKeth <- unique(rbind(UK3,UK4))
+
+Eth2 <- rbind(NHL,HL,UKeth)
+write.csv(Ethnicity, "ORIEN_TCGA_Q_K8_by_Ethnicity.csv")
 ```
+
 ```{r}
 #write.csv(NHL, "IDs_ORIEN_TCGA_NHL_pop_Q_K8.csv")
 #write.csv(HL, "IDs_ORIEN_TCGA_HL_Q_K8.csv")
