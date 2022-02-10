@@ -335,7 +335,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -406,7 +406,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -477,7 +477,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -549,7 +549,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -621,7 +621,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -693,7 +693,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -765,7 +765,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -837,7 +837,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -907,7 +907,7 @@ dev.off()
 
 ## Simple stacked bar plot:
 #p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-#    geom_bar(stat="identity", position="stack") +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
 #    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 ##   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
 #    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -985,8 +985,9 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     geom_bar(stat="identity", position="stack") +
-    facet_grid(. ~ self_ID_race, drop=TRUE, space="free") +
+        facet_grid(. ~ self_ID_race, drop=TRUE, space="free") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
     theme(strip.text=element_text(size=12)) +
     scale_x_discrete(expand=c(0, 0))
@@ -1057,8 +1058,9 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     geom_bar(stat="identity", position="stack") +
-    facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
+        facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
     theme(strip.text=element_text(size=12)) +
@@ -1130,7 +1132,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1204,7 +1206,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1277,7 +1279,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1351,7 +1353,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1425,7 +1427,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1504,8 +1506,9 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     geom_bar(stat="identity", position="stack") +
-    facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
+        facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
     theme(strip.text=element_text(size=12)) +
@@ -1578,8 +1581,9 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     geom_bar(stat="identity", position="stack") +
-    facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
+        facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
     theme(strip.text=element_text(size=12)) +
@@ -1652,7 +1656,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +

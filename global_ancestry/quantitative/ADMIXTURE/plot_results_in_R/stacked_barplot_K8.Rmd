@@ -159,8 +159,8 @@ HGDP_1000GP <- HGDP_1000GP[,c(1,10,2:9)]
     #EAS https://web.expasy.org/cellosaurus/CVCL_I481
 HGDP_1000GP[2622,2] = "EUR"	#HGDP00521
 HGDP_1000GP[2751,2] = "EUR" #HGDP00665
-HGDP_1000GP[6673,2] = "EAS"	#HGDP00778
-HGDP_1000GP[2854,2] = "AFR"	#HGDP00927
+HGDP_1000GP[2854,2] = "EAS"	#HGDP00778
+HGDP_1000GP[2969,2] = "AFR"	#HGDP00927
 HGDP_1000GP[3032,2] = "AMR"	#HGDP00998
 HGDP_1000GP[3225,2] = "AFR"	#HGDP01284
 HGDP_1000GP[3248,2] = "EAS"	#HGDP01307
@@ -318,6 +318,7 @@ names(df)[8] <- "Q6"
 names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -332,7 +333,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -385,6 +386,9 @@ names(df)[4] <- "Q2"
 names(df)[5] <- "Q3"
 names(df)[6] <- "Q4"
 names(df)[7] <- "Q5"
+names(df)[8] <- "Q6"
+names(df)[9] <- "Q7"
+names(df)[10] <- "Q8"
 
 
 # Melt (reshape data from wide format to long format).
@@ -400,7 +404,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -453,6 +457,10 @@ names(df)[4] <- "Q2"
 names(df)[5] <- "Q3"
 names(df)[6] <- "Q4"
 names(df)[7] <- "Q5"
+names(df)[8] <- "Q6"
+names(df)[9] <- "Q7"
+names(df)[10] <- "Q8"
+
 
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "population"), 
@@ -467,7 +475,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -520,6 +528,10 @@ names(df)[4] <- "Q2"
 names(df)[5] <- "Q3"
 names(df)[6] <- "Q4"
 names(df)[7] <- "Q5"
+names(df)[8] <- "Q6"
+names(df)[9] <- "Q7"
+names(df)[10] <- "Q8"
+
 
 
 # Melt (reshape data from wide format to long format).
@@ -535,7 +547,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -588,6 +600,10 @@ names(df)[4] <- "Q2"
 names(df)[5] <- "Q3"
 names(df)[6] <- "Q4"
 names(df)[7] <- "Q5"
+names(df)[8] <- "Q6"
+names(df)[9] <- "Q7"
+names(df)[10] <- "Q8"
+
 
 
 # Melt (reshape data from wide format to long format).
@@ -603,7 +619,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -656,6 +672,10 @@ names(df)[4] <- "Q2"
 names(df)[5] <- "Q3"
 names(df)[6] <- "Q4"
 names(df)[7] <- "Q5"
+names(df)[8] <- "Q6"
+names(df)[9] <- "Q7"
+names(df)[10] <- "Q8"
+
 
 
 # Melt (reshape data from wide format to long format).
@@ -671,7 +691,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -724,6 +744,10 @@ names(df)[4] <- "Q2"
 names(df)[5] <- "Q3"
 names(df)[6] <- "Q4"
 names(df)[7] <- "Q5"
+names(df)[8] <- "Q6"
+names(df)[9] <- "Q7"
+names(df)[10] <- "Q8"
+
 
 
 # Melt (reshape data from wide format to long format).
@@ -739,7 +763,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -792,6 +816,10 @@ names(df)[4] <- "Q2"
 names(df)[5] <- "Q3"
 names(df)[6] <- "Q4"
 names(df)[7] <- "Q5"
+names(df)[8] <- "Q6"
+names(df)[9] <- "Q7"
+names(df)[10] <- "Q8"
+
 
 
 # Melt (reshape data from wide format to long format).
@@ -807,7 +835,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -860,6 +888,9 @@ dev.off()
 #names(df)[5] <- "Q3"
 #names(df)[6] <- "Q4"
 #names(df)[7] <- "Q5"
+#names(df)[8] <- "Q6"
+#names(df)[9] <- "Q7"
+#names(df)[10] <- "Q8"
 
 
 ## Melt (reshape data from wide format to long format).
@@ -874,7 +905,7 @@ dev.off()
 
 ## Simple stacked bar plot:
 #p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-#    geom_bar(stat="identity", position="stack") +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
 #    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
 ##   facet_grid(. ~ population, drop=TRUE, space="free", scales="free_y") +
 #    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -938,6 +969,7 @@ names(df)[8] <- "Q6"
 names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -951,7 +983,8 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+        geom_bar(stat="identity", position="stack") +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
     theme(strip.text=element_text(size=12)) +
@@ -1009,6 +1042,7 @@ names(df)[8] <- "Q6"
 names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -1022,8 +1056,9 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     geom_bar(stat="identity", position="stack") +
-    facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
+        facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
     theme(strip.text=element_text(size=12)) +
@@ -1095,7 +1130,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1155,6 +1190,7 @@ names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -1168,7 +1204,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1227,6 +1263,7 @@ names(df)[8] <- "Q6"
 names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -1240,7 +1277,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1300,6 +1337,7 @@ names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -1313,7 +1351,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1373,6 +1411,7 @@ names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_race"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -1386,7 +1425,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_race, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
@@ -1451,6 +1490,7 @@ names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -1464,8 +1504,9 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     geom_bar(stat="identity", position="stack") +
-    facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
+        facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
     theme(strip.text=element_text(size=12)) +
@@ -1523,6 +1564,8 @@ names(df)[8] <- "Q6"
 names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
+
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -1536,8 +1579,9 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+#    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     geom_bar(stat="identity", position="stack") +
-    facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
+        facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
     theme(strip.text=element_text(size=12)) +
@@ -1596,6 +1640,7 @@ names(df)[9] <- "Q7"
 names(df)[10] <- "Q8"
 
 
+
 # Melt (reshape data from wide format to long format).
 mdat = reshape2::melt(df, id.vars=c("ID", "self_ID_ethnicity"), 
             variable.name="Ancestry", value.name="Fraction")
@@ -1609,7 +1654,7 @@ dev.new(width = 400,   # Create new plot window
 
 # Simple stacked bar plot:
 p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
-    geom_bar(stat="identity", position="stack") +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
     facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_x") +
 #   facet_grid(. ~ self_ID_ethnicity, drop=TRUE, space="free", scales="free_y") +
     theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
