@@ -1,0 +1,2634 @@
+---
+title: "Global Ancestry via LASER/TRACE -- HGDP vs. GP1000"
+output: html_notebook
+---
+
+# Libraries
+```{r}
+library(plotly)
+library(dbplyr)
+library(plyr)
+library(stringi)
+library(Rtsne)
+library(gridExtra)  
+library(ggplot2)
+library(reshape2)
+library(data.table)
+library(tidyverse)
+#work_dir <- "/Users/mpostel/Desktop"
+#setwd(work_dir)
+```
+
+# Read in
+```{r}
+#Reference datasets:
+HGDP_GP1000 <- read.table(file = 'laser.RefPC.coord', sep = '\t', header = TRUE)
+HGDP_GP1000 <- HGDP_GP1000[,c(2:8)]
+
+RefPops <- read.csv("1000GP_HGDP_IDs_Pops.csv")
+RefPops <- RefPops[,c(2,3)]
+names(RefPops)[names(RefPops) == "WES_ID" ] <- "indivID"
+RefPops2 <- merge(RefPops,HGDP_GP1000, all = TRUE)
+names(RefPops2)[names(RefPops2) == "pop" ] <- "popID"
+
+HGDP_GP1000[4975,2] = "EUR"	#HGDP00521
+HGDP_GP1000[4976,2] = "EUR" #HGDP00665
+HGDP_GP1000[4977,2] = "EAS"	#HGDP00778
+HGDP_GP1000[4978,2] = "AFR"	#HGDP00927
+HGDP_GP1000[4979,2] = "AMR"	#HGDP00998
+HGDP_GP1000[4980,2] = "AFR"	#HGDP01284
+HGDP_GP1000[4981,2] = "EAS"	#HGDP01307
+
+RefPops2 <- na.omit(RefPops2) 
+RefPops2 <- unique(RefPops2)
+
+European <- subset(RefPops2, popID == "European Ancestry")
+European_West_Eurasia_SGDP <- subset(RefPops2, popID == "European Ancestry,West Eurasia (SGDP)")
+East_Asian <- subset(RefPops2, popID == "East Asian Ancestry")
+American <- subset(RefPops2, popID == "American Ancestry")
+South_Asian <- subset(RefPops2, popID == "South Asian Ancestry")
+African <- subset(RefPops2, popID == "African Ancestry")
+South_Asian_SGDP <- subset(RefPops2, popID == "South Asia (SGDP),South Asian Ancestry")
+African_SGDP <- subset(RefPops2, popID == "African Ancestry,Africa (SGDP)")
+East_Asian_SGDP <- subset(RefPops2, popID == "East Asia (SGDP),East Asian Ancestry")
+Central_South_Asia <- subset(RefPops2, popID == "Central South Asia (HGDP)")
+Africa_HGDP <- subset(RefPops2, popID == "Africa (HGDP)")
+Oceania_HGDP_SGDP <- subset(RefPops2, popID == "Oceania (SGDP),Oceania (HGDP)")
+Middle_East_HGDP <- subset(RefPops2, popID == "Middle East (HGDP)")
+Europe_HGDP <- subset(RefPops2, popID == "Europe (HGDP)")
+East_Asian_HGDP <- subset(RefPops2, popID == "East Asia (HGDP)")
+Oceania_HGDP <- subset(RefPops2, popID == "Oceania (HGDP)")
+America_HGDP <- subset(RefPops2, popID == "America (HGDP)")
+CAS1 <- subset(RefPops2, popID == "Central Asia and Siberia (SGDP)")
+East_Asian_SGDP2 <- subset(RefPops2, popID == "East Asia (SGDP)")
+Middle_East_HGDP_Africa_SGDP <- subset(RefPops2, popID == "Middle East (HGDP),Africa (SGDP)")
+West_Eurasia <- subset(RefPops2, popID == "West Eurasia (SGDP)")
+African_SGDP2 <- subset(RefPops2, popID == "Africa (SGDP)")
+Oceania_SGDP <- subset(RefPops2, popID == "Oceania (SGDP)")
+America_SGDP <- subset(RefPops2, popID == "America (SGDP)")
+South_Asia_SGDP2 <- subset(RefPops2, popID == "South Asia (SGDP),Central South Asia (HGDP)")
+South_Asia_SGDP_Central_South_Asia_HGDP <- subset(RefPops2, popID == "South Asia (SGDP),Central South Asia (HGDP)")
+America_SGDP_HGDP <- subset(RefPops2, popID == "America (SGDP),America (HGDP)")
+East_Asian_SGDP_HGDP <- subset(RefPops2, popID == "East Asia (SGDP),East Asia (HGDP)")
+African_SGDP_HGDP <- subset(RefPops2, popID == "Africa (SGDP),Africa (HGDP)")
+
+EUR1 <- rbind.fill(European, European_West_Eurasia_SGDP, Europe_HGDP)
+AFR1 <- rbind.fill(Africa_HGDP, African, African_SGDP, African_SGDP_HGDP, African_SGDP2)
+AMR1 <- rbind.fill(America_HGDP, America_SGDP, America_SGDP_HGDP, American)
+SAS1 <- rbind.fill(South_Asian, South_Asian_SGDP, Central_South_Asia, South_Asia_SGDP2, South_Asia_SGDP_Central_South_Asia_HGDP)
+EAS1 <- rbind.fill(East_Asian, East_Asian_HGDP, East_Asian_SGDP, East_Asian_SGDP2, East_Asian_SGDP_HGDP)
+OCE1 <- rbind.fill(Oceania_HGDP, Oceania_HGDP_SGDP, Oceania_SGDP)
+MDE1 <- rbind.fill(Middle_East_HGDP, Middle_East_HGDP_Africa_SGDP)
+
+EUR1$popID = paste("EUR")
+AFR1$popID = paste("AFR")
+AMR1$popID = paste("AMR")
+EAS1$popID = paste("EAS")
+SAS1$popID = paste("SAS")
+OCE1$popID = paste("OCE")
+MDE1$popID = paste("MDE")
+SAS1$popID = paste("SAS")
+CAS1$popID = paste("CAS")
+
+
+```
+
+```{r}
+EUR_2 <- EUR1[grepl("HGDP",EUR1$indivID), ]
+AFR_2 <- AFR1[grepl("HGDP",AFR1$indivID), ]
+AMR_2 <- AMR1[grepl("HGDP",AMR1$indivID), ]
+EAS_2 <- EAS1[grepl("HGDP",EAS1$indivID), ]
+SAS_2 <- SAS1[grepl("HGDP",SAS1$indivID), ]
+OCE_2 <- OCE1[grepl("HGDP",OCE1$indivID), ]
+MDE_2 <- MDE1[grepl("HGDP",MDE1$indivID), ]
+CAS_2 <- CAS1[grepl("HGDP",CAS1$indivID), ]
+HGDP <- rbind(EUR_2,AFR_2,AMR_2,EAS_2,SAS_2,OCE_2,MDE_2,CAS_2)
+
+EUR_HGDP <- subset(HGDP, popID=="EUR")
+AFR_HGDP <- subset(HGDP, popID=="AFR")
+AMR_HGDP <- subset(HGDP, popID=="AMR")
+EAS_HGDP <- subset(HGDP, popID=="EAS")
+SAS_HGDP <- subset(HGDP, popID=="SAS")
+OCE_HGDP <- subset(HGDP, popID=="OCE")
+MDE_HGDP <- subset(HGDP, popID=="MDE")
+CAS_HGDP <- subset(HGDP, popID=="CAS")
+```
+
+```{r}
+EUR_3 <- anti_join(EUR1,EUR_HGDP)
+AFR_3 <- anti_join(AFR1,AFR_HGDP)
+AMR_3 <- anti_join(AMR1,AMR_HGDP)
+EAS_3 <- anti_join(EAS1,EAS_HGDP)
+SAS_3 <- anti_join(SAS1,SAS_HGDP)
+OCE_3 <- anti_join(OCE1,OCE_HGDP)
+MDE_3 <- anti_join(MDE1,MDE_HGDP)
+SAS_3 <- anti_join(SAS1,SAS_HGDP)
+CAS_3 <- anti_join(CAS1,CAS_HGDP)
+
+GP1000 <- rbind(EUR_3,AFR_3,AMR_3,EAS_3,SAS_3,OCE_3,MDE_3,CAS_3)
+EUR_GP1000 <- subset(GP1000, popID=="EUR")
+AFR_GP1000 <- subset(GP1000, popID=="AFR")
+AMR_GP1000 <- subset(GP1000, popID=="AMR")
+EAS_GP1000 <- subset(GP1000, popID=="EAS")
+SAS_GP1000 <- subset(GP1000, popID=="SAS")
+OCE_GP1000 <- subset(GP1000, popID=="OCE")
+MDE_GP1000 <- subset(GP1000, popID=="MDE")
+CAS_GP1000 <- subset(GP1000, popID=="CAS")
+```
+
+#-------------------
+# PCA
+
+## HGDP
+
+#### PC1 vs. PC2
+```{r}
+
+#EUR_HGDP 
+PC1_EUR_HGDP <- EUR_HGDP$PC1
+PC2_EUR_HGDP <- EUR_HGDP$PC2
+PCA <- plot_ly(data = HGDP, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR_HGDP, 
+    y = PC2_EUR_HGDP, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_HGDP')
+
+
+#AFR_HGDP
+PC1_AFR_HGDP <- AFR_HGDP$PC1
+PC2_AFR_HGDP <- AFR_HGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR_HGDP, 
+    y = PC2_AFR_HGDP, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_HGDP')
+
+
+#AMR_HGDP
+PC1_AMR_HGDP <- AMR_HGDP$PC1
+PC2_AMR_HGDP <- AMR_HGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR_HGDP, 
+    y = PC2_AMR_HGDP, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_HGDP')
+
+
+#OCE_HGDP
+PC1_OCE_HGDP <- OCE_HGDP$PC1
+PC2_OCE_HGDP <- OCE_HGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE_HGDP, 
+    y = PC2_OCE_HGDP, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE_HGDP')
+
+
+#MDE_HGDP
+PC1_MDE_HGDP <- MDE_HGDP$PC1
+PC2_MDE_HGDP <- MDE_HGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE_HGDP, 
+    y = PC2_MDE_HGDP, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE_HGDP')
+
+
+#EAS_HGDP
+PC1_EAS_HGDP <- EAS_HGDP$PC1
+PC2_EAS_HGDP <- EAS_HGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS_HGDP, 
+    y = PC2_EAS_HGDP, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_HGDP')
+
+
+#SAS_HGDP
+PC1_SAS_HGDP <- SAS_HGDP$PC1
+PC2_SAS_HGDP <- SAS_HGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS_HGDP, 
+    y = PC2_SAS_HGDP, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_HGDP')
+
+#CAS_HGDP
+PC1_CAS_HGDP<- CAS_HGDP$PC1
+PC2_CAS_HGDP<- CAS_HGDP$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_CAS_HGDP, 
+    y = PC2_CAS_HGDP, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'CAS_HGDP')
+
+#West_EUR_HGDPasia
+#PC1_West_EUR_HGDPasia <- West_EUR_HGDPasia$PC1
+#PC2_West_EUR_HGDPasia <- West_EUR_HGDPasia$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_West_EUR_HGDPasia, 
+#    y = PC2_West_EUR_HGDPasia, 
+#    marker = list(
+#      color = 'royalblue',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'West_EUR_HGDPasia')
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC2")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_HGDP_PC2v1.html")
+
+png("PCA_HGDP_PC2v1.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+```
+
+#### PC2 vs. PC3
+```{r}
+
+#EUR_HGDP 
+PC2_EUR_HGDP <- EUR_HGDP$PC2
+PC3_EUR_HGDP <- EUR_HGDP$PC3
+PCA <- plot_ly(data = HGDP, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR_HGDP, 
+    y = PC3_EUR_HGDP, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_HGDP')
+
+
+#AFR_HGDP
+PC2_AFR_HGDP <- AFR_HGDP$PC2
+PC3_AFR_HGDP <- AFR_HGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR_HGDP, 
+    y = PC3_AFR_HGDP, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_HGDP')
+
+
+#AMR_HGDP
+PC2_AMR_HGDP <- AMR_HGDP$PC2
+PC3_AMR_HGDP <- AMR_HGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR_HGDP, 
+    y = PC3_AMR_HGDP, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_HGDP')
+
+
+#OCE_HGDP
+PC2_OCE_HGDP <- OCE_HGDP$PC2
+PC3_OCE_HGDP <- OCE_HGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_OCE_HGDP, 
+    y = PC3_OCE_HGDP, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE_HGDP')
+
+
+#MDE_HGDP
+PC2_MDE_HGDP <- MDE_HGDP$PC2
+PC3_MDE_HGDP <- MDE_HGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_MDE_HGDP, 
+    y = PC3_MDE_HGDP, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE_HGDP')
+
+
+#EAS_HGDP
+PC2_EAS_HGDP <- EAS_HGDP$PC2
+PC3_EAS_HGDP <- EAS_HGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS_HGDP, 
+    y = PC3_EAS_HGDP, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_HGDP')
+
+
+#SAS_HGDP
+PC2_SAS_HGDP <- SAS_HGDP$PC2
+PC3_SAS_HGDP <- SAS_HGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS_HGDP, 
+    y = PC3_SAS_HGDP, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_HGDP')
+
+#CAS_HGDP
+PC2_CAS_HGDP<- CAS_HGDP$PC2
+PC3_CAS_HGDP<- CAS_HGDP$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_CAS_HGDP, 
+    y = PC3_CAS_HGDP, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'CAS_HGDP')
+
+#West_EUR_HGDPasia
+#PC2_West_EUR_HGDPasia <- West_EUR_HGDPasia$PC2
+#PC3_West_EUR_HGDPasia <- West_EUR_HGDPasia$PC3
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC2_West_EUR_HGDPasia, 
+#    y = PC3_West_EUR_HGDPasia, 
+#    marker = list(
+#      color = 'royalblue',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'West_EUR_HGDPasia')
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC2")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_HGDP_PC3v2.html")
+
+png("PCA_HGDP_PC3v2.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+```
+
+
+## 1000GP
+
+#### PC1 vs. PC2
+```{r}
+
+#EUR_GP1000 
+PC1_EUR_GP1000 <- EUR_GP1000$PC1
+PC2_EUR_GP1000 <- EUR_GP1000$PC2
+PCA <- plot_ly(data = GP1000, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR_GP1000, 
+    y = PC2_EUR_GP1000, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_1000GP')
+
+
+#AFR_GP1000
+PC1_AFR_GP1000 <- AFR_GP1000$PC1
+PC2_AFR_GP1000 <- AFR_GP1000$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR_GP1000, 
+    y = PC2_AFR_GP1000, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_1000GP')
+
+
+#AMR_GP1000
+PC1_AMR_GP1000 <- AMR_GP1000$PC1
+PC2_AMR_GP1000 <- AMR_GP1000$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR_GP1000, 
+    y = PC2_AMR_GP1000, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_1000GP')
+
+
+#OCE_GP1000 --> No Oceania in 1000GP
+#PC1_OCE_GP1000 <- OCE_GP1000$PC1
+#PC2_OCE_GP1000 <- OCE_GP1000$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_OCE_GP1000, 
+#    y = PC2_OCE_GP1000, 
+#    marker = list(
+#      color = 'blue',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'OCE_1000GP')
+
+
+#MDE_GP1000 --> 1000GP doesn't have Middle East
+#PC1_MDE_GP1000 <- MDE_GP1000$PC1
+#PC2_MDE_GP1000 <- MDE_GP1000$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_MDE_GP1000, 
+#    y = PC2_MDE_GP1000, 
+#    marker = list(
+#      color = 'purple',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'MDE_1000GP')
+
+
+#EAS_GP1000
+PC1_EAS_GP1000 <- EAS_GP1000$PC1
+PC2_EAS_GP1000 <- EAS_GP1000$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS_GP1000, 
+    y = PC2_EAS_GP1000, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_1000GP')
+
+
+#SAS_GP1000
+PC1_SAS_GP1000 <- SAS_GP1000$PC1
+PC2_SAS_GP1000 <- SAS_GP1000$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS_GP1000, 
+    y = PC2_SAS_GP1000, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_1000GP')
+
+#CAS_GP1000 --> 1000GP doesn't have Central Asia/Siberia
+#PC1_CAS_GP1000<- CAS_GP1000$PC1
+#PC2_CAS_GP1000<- CAS_GP1000$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_CAS_GP1000, 
+#    y = PC2_CAS_GP1000, 
+#    marker = list(
+#      color = 'coral1',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'CAS_1000GP')
+
+#West_EUR_GP1000asia
+#PC1_West_EUR_GP1000asia <- West_EUR_GP1000asia$PC1
+#PC2_West_EUR_GP1000asia <- West_EUR_GP1000asia$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_West_EUR_GP1000asia, 
+#    y = PC2_West_EUR_GP1000asia, 
+#    marker = list(
+#      color = 'royalblue',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'West_EUR_GP1000asia')
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC2")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_1000GP_PC2v1.html")
+
+png("PCA_1000GP_PC2v1.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+
+```
+
+#### PC2 vs. PC3
+```{r}
+
+#EUR_GP1000 
+PC2_EUR_GP1000 <- EUR_GP1000$PC2
+PC3_EUR_GP1000 <- EUR_GP1000$PC3
+PCA <- plot_ly(data = GP1000, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR_GP1000, 
+    y = PC3_EUR_GP1000, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_1000GP')
+
+
+#AFR_GP1000
+PC2_AFR_GP1000 <- AFR_GP1000$PC2
+PC3_AFR_GP1000 <- AFR_GP1000$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR_GP1000, 
+    y = PC3_AFR_GP1000, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_1000GP')
+
+
+#AMR_GP1000
+PC2_AMR_GP1000 <- AMR_GP1000$PC2
+PC3_AMR_GP1000 <- AMR_GP1000$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR_GP1000, 
+    y = PC3_AMR_GP1000, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_1000GP')
+
+
+#OCE_GP1000 --> 1000GP doesn't have Oceania
+#PC2_OCE_GP1000 <- OCE_GP1000$PC2
+#PC3_OCE_GP1000 <- OCE_GP1000$PC3
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC2_OCE_GP1000, 
+#    y = PC3_OCE_GP1000, 
+#    marker = list(
+#      color = 'blue',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'OCE_1000GP')
+
+
+#MDE_GP1000  --> 1000GP doesn't have Middle East
+#PC2_MDE_GP1000 <- MDE_GP1000$PC2
+#PC3_MDE_GP1000 <- MDE_GP1000$PC3
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC2_MDE_GP1000, 
+#    y = PC3_MDE_GP1000, 
+#    marker = list(
+#      color = 'purple',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'MDE_1000GP')
+
+
+#EAS_GP1000
+PC2_EAS_GP1000 <- EAS_GP1000$PC2
+PC3_EAS_GP1000 <- EAS_GP1000$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS_GP1000, 
+    y = PC3_EAS_GP1000, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_1000GP')
+
+
+#SAS_GP1000
+PC2_SAS_GP1000 <- SAS_GP1000$PC2
+PC3_SAS_GP1000 <- SAS_GP1000$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS_GP1000, 
+    y = PC3_SAS_GP1000, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_1000GP')
+
+#CAS_GP1000  --> 1000GP doesn't have Central Asia/Siberia
+#PC2_CAS_GP1000<- CAS_GP1000$PC2
+#PC3_CAS_GP1000<- CAS_GP1000$PC3
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC2_CAS_GP1000, 
+#    y = PC3_CAS_GP1000, 
+#    marker = list(
+#      color = 'coral1',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'CAS_1000GP')
+
+#West_EUR_GP1000asia
+#PC2_West_EUR_GP1000asia <- West_EUR_GP1000asia$PC2
+#PC3_West_EUR_GP1000asia <- West_EUR_GP1000asia$PC3
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC2_West_EUR_GP1000asia, 
+#    y = PC3_West_EUR_GP1000asia, 
+#    marker = list(
+#      color = 'royalblue',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'West_EUR_GP1000asia')
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC2")
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_1000GP_PC3v2.html")
+
+png("PCA_1000GP_PC3v2.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+
+```
+
+
+## Both HGDP + 1000GP
+
+#### PC1 vs. PC2
+```{r}
+
+Both <- rbind(HGDP,GP1000)
+EUR_Both <- subset(Both, popID=="EUR")
+AFR_Both <- subset(Both, popID=="AFR")
+AMR_Both <- subset(Both, popID=="AMR")
+EAS_Both <- subset(Both, popID=="EAS")
+SAS_Both <- subset(Both, popID=="SAS")
+OCE_Both <- subset(Both, popID=="OCE")
+MDE_Both <- subset(Both, popID=="MDE")
+CAS_Both <- subset(Both, popID=="CAS")
+
+#EUR_HGDP 
+PC1_EUR_Both <- EUR_Both$PC1
+PC2_EUR_Both <- EUR_Both$PC2
+PCA <- plot_ly(data = Both, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR_Both, 
+    y = PC2_EUR_Both, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_Both')
+
+
+#AFR_Both
+PC1_AFR_Both <- AFR_Both$PC1
+PC2_AFR_Both <- AFR_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR_Both, 
+    y = PC2_AFR_Both, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_Both')
+
+
+#AMR_Both
+PC1_AMR_Both <- AMR_Both$PC1
+PC2_AMR_Both <- AMR_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR_Both, 
+    y = PC2_AMR_Both, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_Both')
+
+
+#OCE_Both
+PC1_OCE_Both <- OCE_Both$PC1
+PC2_OCE_Both <- OCE_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE_Both, 
+    y = PC2_OCE_Both, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE_Both')
+
+
+#MDE_Both
+PC1_MDE_Both <- MDE_Both$PC1
+PC2_MDE_Both <- MDE_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE_Both, 
+    y = PC2_MDE_Both, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE_Both')
+
+
+#EAS_Both
+PC1_EAS_Both <- EAS_Both$PC1
+PC2_EAS_Both <- EAS_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS_Both, 
+    y = PC2_EAS_Both, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_Both')
+
+
+#SAS_Both
+PC1_SAS_Both <- SAS_Both$PC1
+PC2_SAS_Both <- SAS_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS_Both, 
+    y = PC2_SAS_Both, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_Both')
+
+#CAS_Both
+PC1_CAS_Both<- CAS_Both$PC1
+PC2_CAS_Both<- CAS_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_CAS_Both, 
+    y = PC2_CAS_Both, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'CAS_Both')
+
+
+#EUR_Both 
+PC1_EUR_Both <- EUR_Both$PC1
+PC2_EUR_Both <- EUR_Both$PC2
+PCA <- plot_ly(data = GP1000, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR_Both, 
+    y = PC2_EUR_Both, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_Both')
+
+
+#AFR_Both
+PC1_AFR_Both <- AFR_Both$PC1
+PC2_AFR_Both <- AFR_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR_Both, 
+    y = PC2_AFR_Both, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_Both')
+
+
+#AMR_Both
+PC1_AMR_Both <- AMR_Both$PC1
+PC2_AMR_Both <- AMR_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR_Both, 
+    y = PC2_AMR_Both, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_Both')
+
+
+#OCE_Both --> No Oceania in Both
+#PC1_OCE_Both <- OCE_Both$PC1
+#PC2_OCE_Both <- OCE_Both$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_OCE_Both, 
+#    y = PC2_OCE_Both, 
+#    marker = list(
+#      color = 'blue',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'OCE_Both')
+
+
+#MDE_Both --> Both doesn't have Middle East
+#PC1_MDE_Both <- MDE_Both$PC1
+#PC2_MDE_Both <- MDE_Both$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_MDE_Both, 
+#    y = PC2_MDE_Both, 
+#    marker = list(
+#      color = 'purple',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'MDE_Both')
+
+
+#EAS_Both
+PC1_EAS_Both <- EAS_Both$PC1
+PC2_EAS_Both <- EAS_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS_Both, 
+    y = PC2_EAS_Both, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_Both')
+
+
+#SAS_Both
+PC1_SAS_Both <- SAS_Both$PC1
+PC2_SAS_Both <- SAS_Both$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS_Both, 
+    y = PC2_SAS_Both, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_Both')
+
+#CAS_Both --> Both doesn't have Central Asia/Siberia
+#PC1_CAS_Both<- CAS_Both$PC1
+#PC2_CAS_Both<- CAS_Both$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_CAS_Both, 
+#    y = PC2_CAS_Both, 
+#    marker = list(
+#      color = 'coral1',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'CAS_Both')
+
+#West_EUR_Bothasia
+#PC1_West_EUR_Bothasia <- West_EUR_Bothasia$PC1
+#PC2_West_EUR_Bothasia <- West_EUR_Bothasia$PC2
+
+#PCA <- PCA %>%
+#  add_markers(
+#    x = PC1_West_EUR_Bothasia, 
+#    y = PC2_West_EUR_Bothasia, 
+#    marker = list(
+#      color = 'royalblue',
+#      size = 10,
+#      opacity = 0.3,
+#      line = list(
+#        color = '#7f7f7f',
+#        width = 2
+#      )), name = 'West_EUR_Bothasia')
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC2")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_Both_PC2v1.html")
+
+png("PCA_Both_PC2v1.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+
+```
+
+#### PC2 vs. PC3
+```{r}
+
+Both <- rbind(HGDP,GP1000)
+EUR_Both <- subset(Both, popID=="EUR")
+AFR_Both <- subset(Both, popID=="AFR")
+AMR_Both <- subset(Both, popID=="AMR")
+EAS_Both <- subset(Both, popID=="EAS")
+SAS_Both <- subset(Both, popID=="SAS")
+OCE_Both <- subset(Both, popID=="OCE")
+MDE_Both <- subset(Both, popID=="MDE")
+CAS_Both <- subset(Both, popID=="CAS")
+
+#EUR_Both 
+PC2_EUR_Both <- EUR_Both$PC2
+PC3_EUR_Both <- EUR_Both$PC3
+PCA <- plot_ly(data = Both, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR_Both, 
+    y = PC3_EUR_Both, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_Both')
+
+
+#AFR_Both
+PC2_AFR_Both <- AFR_Both$PC2
+PC3_AFR_Both <- AFR_Both$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR_Both, 
+    y = PC3_AFR_Both, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_Both')
+
+
+#AMR_Both
+PC2_AMR_Both <- AMR_Both$PC2
+PC3_AMR_Both <- AMR_Both$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR_Both, 
+    y = PC3_AMR_Both, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_Both')
+
+
+#OCE_Both
+PC2_OCE_Both <- OCE_Both$PC2
+PC3_OCE_Both <- OCE_Both$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_OCE_Both, 
+    y = PC3_OCE_Both, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE_Both')
+
+
+#MDE_Both
+PC2_MDE_Both <- MDE_Both$PC2
+PC3_MDE_Both <- MDE_Both$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_MDE_Both, 
+    y = PC3_MDE_Both, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE_Both')
+
+
+#EAS_Both
+PC2_EAS_Both <- EAS_Both$PC2
+PC3_EAS_Both <- EAS_Both$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS_Both, 
+    y = PC3_EAS_Both, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_Both')
+
+
+#SAS_Both
+PC2_SAS_Both <- SAS_Both$PC2
+PC3_SAS_Both <- SAS_Both$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS_Both, 
+    y = PC3_SAS_Both, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_Both')
+
+#CAS_Both
+PC2_CAS_Both<- CAS_Both$PC2
+PC3_CAS_Both<- CAS_Both$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_CAS_Both, 
+    y = PC3_CAS_Both, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'CAS_Both')
+
+
+
+
+x <- list(
+  title = "PC2")
+y <- list(
+  title = "PC3")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_Both_PC3v2.html")
+
+png("PCA_Both_PC3v2.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+
+```
+
+
+## Add ORIEN/TCGA
+```{r}
+sample_coord1 <- read.table(file = 'results.1-1250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord2 <- read.table(file = 'results.1251-2500.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord3 <- read.table(file = 'results.2501-3750.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord4 <- read.table(file = 'results.3751-5000.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord5 <- read.table(file = 'results.5001-6250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord6 <- read.table(file = 'results.6251-7500.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord7 <- read.table(file = 'results.7501-8750.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord8 <- read.table(file = 'results.8751-10000.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord9 <- read.table(file = 'results.10001-11250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord10 <- read.table(file = 'results.11251-12500.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord11 <- read.table(file = 'results.12501-13750.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord12 <- read.table(file = 'results.13751-15000.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord13 <- read.table(file = 'results.15001-16250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord14 <- read.table(file = 'results.16251-17500.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord15 <- read.table(file = 'results.17501-18750.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord16 <- read.table(file = 'results.18751-20000.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord17 <- read.table(file = 'results.20001-21250.ProPC.coord', sep = '\t', header = TRUE)
+sample_coord18 <- read.table(file = 'results.21251-21608.ProPC.coord', sep = '\t', header = TRUE)
+
+sample_coord <- rbind(sample_coord1,sample_coord2,sample_coord3,sample_coord4,sample_coord5,sample_coord6,sample_coord7,sample_coord8,sample_coord9,sample_coord10,sample_coord11,sample_coord12,sample_coord13,sample_coord14,sample_coord15,sample_coord16,sample_coord17,sample_coord18)
+ORIEN_TCGA_coord <- sample_coord[,c(1,2,7:12)]
+
+
+Race <- read.csv("ORIEN_TCGA_IDs_race.csv")
+Race <- Race[,c(2,3)]
+names(Race)[names(Race) == "WES_ID" ] <- "indivID"
+Race2 <- merge(Race,ORIEN_TCGA_coord,by="indivID")
+Race2 <- Race2[,c(1,2,4:9)]
+names(Race2)[names(Race2) == "pop" ] <- "popID"
+
+Ethnicity <- read.csv("ORIEN_TCGA_IDs_ethnicity.csv")
+Ethnicity <- Ethnicity[,c(2,3)]
+names(Ethnicity)[names(Ethnicity) == "WES_ID" ] <- "indivID"
+Ethnicity2 <- merge(Ethnicity,ORIEN_TCGA_coord,by="indivID")
+Ethnicity2 <- Ethnicity2[,c(1,2,4:9)]
+names(Ethnicity2)[names(Ethnicity2) == "pop" ] <- "popID"
+
+Race2[Race2$popID == "Unknown",]$popID = "Unknown/Not_Reported"
+Ethnicity2[Ethnicity2$popID == "Unknown",]$popID = "Unknown/Not_Reported"
+
+HL <- subset(Ethnicity2, popID == "Hispanic/Latino")
+NHL <- subset(Ethnicity2, popID == "Not_Hispanic/Not_Latino")
+EthNR <- subset(Ethnicity2, popID == "Unknown/Not_Reported")
+
+AfAm <- subset(Race2, popID == "Black_or_African_American")
+NAm <- subset(Race2, popID == "American_Indian_or_Alaska_Native")
+Asia <- subset(Race2, popID == "Asian")
+W <- subset(Race2, popID == "White")
+PacIsl <- subset(Race2, popID == "Hawaiian_or_Other_Pacific_Islander")
+RaNR <- subset(Race2, popID == "Unknown/Not_Reported")
+OthRace <- subset(Race2, popID == "Other")
+
+TCGA_names <- read.table("TCGA_vcfIDs_race_uniq_final.tsv")
+names(TCGA_names)[names(TCGA_names ) == "V1" ] <- "indivID"
+ORIEN <- anti_join(ORIEN_TCGA_coord, TCGA_names, by="indivID")
+ORIEN_HL <- merge(ORIEN, HL, by="indivID")
+TCGA_HL <- merge(TCGA_names, HL)
+TCGA_HL <- TCGA_HL[,c(1,3:9)]
+ORIEN_NHL <- merge(ORIEN, NHL, by="indivID")
+TCGA_NHL <- merge(TCGA_names, NHL)
+TCGA_NHL <- TCGA_NHL[,c(1,3:9)]
+ORIEN_EthNR <- merge(ORIEN, EthNR, by="indivID")
+TCGA_EthNR <- merge(TCGA_names, EthNR)
+TCGA_EthNR <- TCGA_EthNR[,c(1,3:9)]
+ORIEN_AfAm <- merge(ORIEN, AfAm, by="indivID")
+TCGA_AfAm <- merge(TCGA_names, AfAm)
+TCGA_AfAm <- TCGA_AfAm[,c(1,3:9)]
+ORIEN_NAm <- merge(ORIEN, NAm, by="indivID")
+TCGA_NAm <- merge(TCGA_names, NAm)
+TCGA_NAm <- TCGA_NAm[,c(1,3:9)]
+ORIEN_Asia <- merge(ORIEN, Asia, by="indivID")
+TCGA_Asia <- merge(TCGA_names, Asia)
+TCGA_Asia <- TCGA_Asia[,c(1,3:9)]
+ORIEN_W <- merge(ORIEN, W, by="indivID")
+TCGA_W <- merge(TCGA_names, W)
+TCGA_W <- TCGA_W[,c(1,3:9)]
+ORIEN_PacIsl <- merge(ORIEN, PacIsl, by="indivID")
+TCGA_PacIsl <- merge(TCGA_names, PacIsl)
+TCGA_PacIsl <- TCGA_PacIsl[,c(1,3:9)]
+ORIEN_RaNR <- merge(ORIEN, RaNR, by="indivID")
+TCGA_RaNR <- merge(TCGA_names, RaNR)
+TCGA_RaNR <- TCGA_RaNR[,c(1,3:9)]
+ORIEN_OthRace <- merge(ORIEN, OthRace, by="indivID")
+TCGA_OthRace <- merge(TCGA_names, OthRace)
+TCGA_OthRace <- TCGA_OthRace[,c(1,3:9)]
+```
+
+#### ORIEN by Self-Reported Ethnicity
+
+PC2 vs. PC1
+```{r}
+All <- rbind(Both,Ethnicity2)
+All <- unique(All)
+
+EUR_All <- subset(All, popID=="EUR")
+AFR_All <- subset(All, popID=="AFR")
+AMR_All <- subset(All, popID=="AMR")
+EAS_All <- subset(All, popID=="EAS")
+SAS_All <- subset(All, popID=="SAS")
+OCE_All <- subset(All, popID=="OCE")
+MDE_All <- subset(All, popID=="MDE")
+CAS_All <- subset(All, popID=="CAS")
+NHL_All <- subset(All, popID=="Not_Hispanic/Not_Latino")
+HL_All <- subset(All, popID=="Hispanic/Latino")
+EthNR_All <- subset(All, popID=="Unknown/Not_Reported")
+
+PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
+
+#------
+#ORIEN/TCGA Hispanic/Latinx
+PC1_HL_All <- HL_All$PC1
+PC2_HL_All <- HL_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_HL_All, 
+    y = PC2_HL_All, 
+    marker = list(
+      color = 'dodgerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN + TCGA: Hispanic/Latinx')
+
+# NOT Hispanic/Latinx
+PC1_NHL_All <- NHL_All$PC1
+PC2_NHL_All <- NHL_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_NHL_All, 
+    y = PC2_NHL_All, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN + TCGA: NOT Hispanic/Latinx')
+
+# Unknown Ethnicity
+PC1_EthNR_All <- EthNR_All$PC1
+PC2_EthNR_All <- EthNR_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EthNR_All, 
+    y = PC2_EthNR_All, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN + TCGA: Unknown Ethnicity')
+
+ 
+#EUR
+PC1_EUR_All <- EUR_All$PC1
+PC2_EUR_All <- EUR_All$PC2
+PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR_All, 
+    y = PC2_EUR_All, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_All')
+
+
+#AFR_All
+PC1_AFR_All <- AFR_All$PC1
+PC2_AFR_All <- AFR_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR_All, 
+    y = PC2_AFR_All, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_All')
+
+
+#AMR_All
+PC1_AMR_All <- AMR_All$PC1
+PC2_AMR_All <- AMR_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR_All, 
+    y = PC2_AMR_All, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_All')
+
+
+#OCE_All
+PC1_OCE_All <- OCE_All$PC1
+PC2_OCE_All <- OCE_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE_All, 
+    y = PC2_OCE_All, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE_All')
+
+
+#MDE_All
+PC1_MDE_All <- MDE_All$PC1
+PC2_MDE_All <- MDE_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE_All, 
+    y = PC2_MDE_All, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE_All')
+
+
+#EAS_All
+PC1_EAS_All <- EAS_All$PC1
+PC2_EAS_All <- EAS_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS_All, 
+    y = PC2_EAS_All, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_All')
+
+
+#SAS_All
+PC1_SAS_All <- SAS_All$PC1
+PC2_SAS_All <- SAS_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS_All, 
+    y = PC2_SAS_All, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_All')
+
+#CAS_All
+PC1_CAS_All<- CAS_All$PC1
+PC2_CAS_All<- CAS_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_CAS_All, 
+    y = PC2_CAS_All, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'CAS_All')
+
+
+x <- list(
+  title = "PC1")
+y <- list(
+  title = "PC2")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_PC2v1_Ethnicity.html")
+
+png("PCA_PC2v1_Ethnicity.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+```
+
+PC3 vs. PC2
+```{r}
+All <- rbind(Both,Ethnicity2)
+All <- unique(All)
+
+EUR_All <- subset(All, popID=="EUR")
+AFR_All <- subset(All, popID=="AFR")
+AMR_All <- subset(All, popID=="AMR")
+EAS_All <- subset(All, popID=="EAS")
+SAS_All <- subset(All, popID=="SAS")
+OCE_All <- subset(All, popID=="OCE")
+MDE_All <- subset(All, popID=="MDE")
+CAS_All <- subset(All, popID=="CAS")
+NHL_All <- subset(All, popID=="Not_Hispanic/Not_Latino")
+HL_All <- subset(All, popID=="Hispanic/Latino")
+EthNR_All <- subset(All, popID=="Unknown/Not_Reported")
+
+PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
+
+#------
+#ORIEN/TCGA Hispanic/Latinx
+PC2_HL_All <- HL_All$PC2
+PC3_HL_All <- HL_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_HL_All, 
+    y = PC3_HL_All, 
+    marker = list(
+      color = 'dodgerblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN + TCGA: Hispanic/Latinx')
+
+# NOT Hispanic/Latinx
+PC2_NHL_All <- NHL_All$PC2
+PC3_NHL_All <- NHL_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_NHL_All, 
+    y = PC3_NHL_All, 
+    marker = list(
+      color = 'darkorchid1',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN + TCGA: NOT Hispanic/Latinx')
+
+# Unknown Ethnicity
+PC2_EthNR_All <- EthNR_All$PC2
+PC3_EthNR_All <- EthNR_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EthNR_All, 
+    y = PC3_EthNR_All, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'ORIEN + TCGA: Unknown Ethnicity')
+
+ 
+#EUR
+PC2_EUR_All <- EUR_All$PC2
+PC3_EUR_All <- EUR_All$PC3
+PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR_All, 
+    y = PC3_EUR_All, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_All')
+
+
+#AFR_All
+PC2_AFR_All <- AFR_All$PC2
+PC3_AFR_All <- AFR_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR_All, 
+    y = PC3_AFR_All, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_All')
+
+
+#AMR_All
+PC2_AMR_All <- AMR_All$PC2
+PC3_AMR_All <- AMR_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR_All, 
+    y = PC3_AMR_All, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_All')
+
+
+#OCE_All
+PC2_OCE_All <- OCE_All$PC2
+PC3_OCE_All <- OCE_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_OCE_All, 
+    y = PC3_OCE_All, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE_All')
+
+
+#MDE_All
+PC2_MDE_All <- MDE_All$PC2
+PC3_MDE_All <- MDE_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_MDE_All, 
+    y = PC3_MDE_All, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE_All')
+
+
+#EAS_All
+PC2_EAS_All <- EAS_All$PC2
+PC3_EAS_All <- EAS_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS_All, 
+    y = PC3_EAS_All, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_All')
+
+
+#SAS_All
+PC2_SAS_All <- SAS_All$PC2
+PC3_SAS_All <- SAS_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS_All, 
+    y = PC3_SAS_All, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_All')
+
+#CAS_All
+PC2_CAS_All<- CAS_All$PC2
+PC3_CAS_All<- CAS_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_CAS_All, 
+    y = PC3_CAS_All, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'CAS_All')
+
+
+x <- list(
+  title = "PC2")
+y <- list(
+  title = "PC3")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_PC3v2_Ethnicity.html")
+
+png("PCA_PC3v2_Ethnicity.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+```
+
+#### ORIEN by Self-Reported Race
+
+PC2 vs. PC1
+```{r}
+All <- rbind(Both,Race2)
+All <- unique(All)
+
+EUR_All <- subset(All, popID=="EUR")
+AFR_All <- subset(All, popID=="AFR")
+AMR_All <- subset(All, popID=="AMR")
+EAS_All <- subset(All, popID=="EAS")
+SAS_All <- subset(All, popID=="SAS")
+OCE_All <- subset(All, popID=="OCE")
+MDE_All <- subset(All, popID=="MDE")
+CAS_All <- subset(All, popID=="CAS")
+
+All_NAm <- subset(All, popID=="American_Indian_or_Alaska_Native")
+All_W <- subset(All, popID=="White")
+All_PacIsl <- subset(All, popID=="Hawaiian_or_Other_Pacific_Islander")
+All_Asia <- subset(All, popID=="Asian")
+All_AfAm <- subset(All, popID=="Black_or_African_American")
+All_OthRace <- subset(All, popID=="Other")
+All_RaNR <- subset(All, popID=="Unknown/Not_Reported")
+
+PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
+
+#------
+
+
+#All American Indian Alaska Native
+PC1_All_NAm <- All_NAm$PC1
+PC2_All_NAm <- All_NAm$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_All_NAm, 
+    y = PC2_All_NAm, 
+    marker = list(
+      color = 'salmon',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: American Indian or Alaska Native')
+
+#All Asian
+PC1_All_Asia <- All_Asia$PC1
+PC2_All_Asia <- All_Asia$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_All_Asia, 
+    y = PC2_All_Asia, 
+    marker = list(
+      color = 'forestgreen',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Asian')
+
+#All African American/Black
+PC1_All_AfAm <- All_AfAm$PC1
+PC2_All_AfAm <- All_AfAm$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_All_AfAm, 
+    y = PC2_All_AfAm, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Black or African American')
+
+#All Hawaiian or Other Pacific Islander
+PC1_All_PacIsl <- All_PacIsl$PC1
+PC2_All_PacIsl <- All_PacIsl$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_All_PacIsl, 
+    y = PC2_All_PacIsl, 
+    marker = list(
+      color = 'darkblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Hawaiian or Other Pacific Islander')
+
+#All Not Reported/Unknown
+PC1_All_RaNR <- All_RaNR$PC1
+PC2_All_RaNR <- All_RaNR$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_All_RaNR, 
+    y = PC2_All_RaNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Race Unknown/Not Reported')
+
+#All White
+PC1_All_W <- All_W$PC1
+PC2_All_W <- All_W$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_All_W, 
+    y = PC2_All_W, 
+    marker = list(
+      color = 'darkred',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: White')
+
+#All Other Race
+PC1_All_OthRace <- All_OthRace$PC1
+PC2_All_OthRace <- All_OthRace$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_All_OthRace, 
+    y = PC2_All_OthRace, 
+    marker = list(
+      color = 'midnightblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Other Race')
+
+ 
+#EUR
+PC1_EUR_All <- EUR_All$PC1
+PC2_EUR_All <- EUR_All$PC2
+PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EUR_All, 
+    y = PC2_EUR_All, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_All')
+
+
+#AFR_All
+PC1_AFR_All <- AFR_All$PC1
+PC2_AFR_All <- AFR_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AFR_All, 
+    y = PC2_AFR_All, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_All')
+
+
+#AMR_All
+PC1_AMR_All <- AMR_All$PC1
+PC2_AMR_All <- AMR_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_AMR_All, 
+    y = PC2_AMR_All, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_All')
+
+
+#OCE_All
+PC1_OCE_All <- OCE_All$PC1
+PC2_OCE_All <- OCE_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_OCE_All, 
+    y = PC2_OCE_All, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE_All')
+
+
+#MDE_All
+PC1_MDE_All <- MDE_All$PC1
+PC2_MDE_All <- MDE_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_MDE_All, 
+    y = PC2_MDE_All, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE_All')
+
+
+#EAS_All
+PC1_EAS_All <- EAS_All$PC1
+PC2_EAS_All <- EAS_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_EAS_All, 
+    y = PC2_EAS_All, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_All')
+
+
+#SAS_All
+PC1_SAS_All <- SAS_All$PC1
+PC2_SAS_All <- SAS_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_SAS_All, 
+    y = PC2_SAS_All, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_All')
+
+#CAS_All
+PC1_CAS_All<- CAS_All$PC1
+PC2_CAS_All<- CAS_All$PC2
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC1_CAS_All, 
+    y = PC2_CAS_All, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'CAS_All')
+
+
+x <- list(
+  title = "PC2")
+y <- list(
+  title = "PC3")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_PC2v1_Race.html")
+
+png("PCA_PC2v1_Race.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+```
+
+PC3 vs. PC2
+```{r}
+All <- rbind(Both,Race2)
+All <- unique(All)
+
+EUR_All <- subset(All, popID=="EUR")
+AFR_All <- subset(All, popID=="AFR")
+AMR_All <- subset(All, popID=="AMR")
+EAS_All <- subset(All, popID=="EAS")
+SAS_All <- subset(All, popID=="SAS")
+OCE_All <- subset(All, popID=="OCE")
+MDE_All <- subset(All, popID=="MDE")
+CAS_All <- subset(All, popID=="CAS")
+
+All_NAm <- subset(All, popID=="American_Indian_or_Alaska_Native")
+All_W <- subset(All, popID=="White")
+All_PacIsl <- subset(All, popID=="Hawaiian_or_Other_Pacific_Islander")
+All_Asia <- subset(All, popID=="Asian")
+All_AfAm <- subset(All, popID=="Black_or_African_American")
+All_OthRace <- subset(All, popID=="Other")
+All_RaNR <- subset(All, popID=="Unknown/Not_Reported")
+
+PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
+
+#------
+
+
+#All American Indian Alaska Native
+PC2_All_NAm <- All_NAm$PC2
+PC3_All_NAm <- All_NAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_All_NAm, 
+    y = PC3_All_NAm, 
+    marker = list(
+      color = 'salmon',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: American Indian or Alaska Native')
+
+#All Asian
+PC2_All_Asia <- All_Asia$PC2
+PC3_All_Asia <- All_Asia$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_All_Asia, 
+    y = PC3_All_Asia, 
+    marker = list(
+      color = 'forestgreen',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Asian')
+
+#All African American/Black
+PC2_All_AfAm <- All_AfAm$PC2
+PC3_All_AfAm <- All_AfAm$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_All_AfAm, 
+    y = PC3_All_AfAm, 
+    marker = list(
+      color = 'darkorchid',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Black or African American')
+
+#All Hawaiian or Other Pacific Islander
+PC2_All_PacIsl <- All_PacIsl$PC2
+PC3_All_PacIsl <- All_PacIsl$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_All_PacIsl, 
+    y = PC3_All_PacIsl, 
+    marker = list(
+      color = 'darkblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Hawaiian or Other Pacific Islander')
+
+#All Not Reported/Unknown
+PC2_All_RaNR <- All_RaNR$PC2
+PC3_All_RaNR <- All_RaNR$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_All_RaNR, 
+    y = PC3_All_RaNR, 
+    marker = list(
+      color = 'gray80',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Race Unknown/Not Reported')
+
+#All White
+PC2_All_W <- All_W$PC2
+PC3_All_W <- All_W$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_All_W, 
+    y = PC3_All_W, 
+    marker = list(
+      color = 'darkred',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: White')
+
+#All Other Race
+PC2_All_OthRace <- All_OthRace$PC2
+PC3_All_OthRace <- All_OthRace$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_All_OthRace, 
+    y = PC3_All_OthRace, 
+    marker = list(
+      color = 'midnightblue',
+      size = 10,
+      opacity = 0.7,
+      line = list(
+        color = 'black',
+        width = 2
+      )), name = 'All: Other Race')
+
+ 
+#EUR
+PC2_EUR_All <- EUR_All$PC2
+PC3_EUR_All <- EUR_All$PC3
+PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EUR_All, 
+    y = PC3_EUR_All, 
+    marker = list(
+      color = 'darkgreen',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EUR_All')
+
+
+#AFR_All
+PC2_AFR_All <- AFR_All$PC2
+PC3_AFR_All <- AFR_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AFR_All, 
+    y = PC3_AFR_All, 
+    marker = list(
+      color = 'firebrick',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AFR_All')
+
+
+#AMR_All
+PC2_AMR_All <- AMR_All$PC2
+PC3_AMR_All <- AMR_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_AMR_All, 
+    y = PC3_AMR_All, 
+    marker = list(
+      color = 'gold',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'AMR_All')
+
+
+#OCE_All
+PC2_OCE_All <- OCE_All$PC2
+PC3_OCE_All <- OCE_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_OCE_All, 
+    y = PC3_OCE_All, 
+    marker = list(
+      color = 'blue',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'OCE_All')
+
+
+#MDE_All
+PC2_MDE_All <- MDE_All$PC2
+PC3_MDE_All <- MDE_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_MDE_All, 
+    y = PC3_MDE_All, 
+    marker = list(
+      color = 'purple',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'MDE_All')
+
+
+#EAS_All
+PC2_EAS_All <- EAS_All$PC2
+PC3_EAS_All <- EAS_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_EAS_All, 
+    y = PC3_EAS_All, 
+    marker = list(
+      color = 'chartreuse',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'EAS_All')
+
+
+#SAS_All
+PC2_SAS_All <- SAS_All$PC2
+PC3_SAS_All <- SAS_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_SAS_All, 
+    y = PC3_SAS_All, 
+    marker = list(
+      color = 'deeppink',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'SAS_All')
+
+#CAS_All
+PC2_CAS_All<- CAS_All$PC2
+PC3_CAS_All<- CAS_All$PC3
+
+PCA <- PCA %>%
+  add_markers(
+    x = PC2_CAS_All, 
+    y = PC3_CAS_All, 
+    marker = list(
+      color = 'coral1',
+      size = 10,
+      opacity = 0.3,
+      line = list(
+        color = '#7f7f7f',
+        width = 2
+      )), name = 'CAS_All')
+
+
+x <- list(
+  title = "PC2")
+y <- list(
+  title = "PC3")
+
+
+PCA <- PCA %>% layout(xaxis = x, yaxis = y)
+PCA
+
+htmlwidgets::saveWidget(as_widget(PCA), "PCA_PC3v2_Race.html")
+
+png("PCA_PC3v2_Race.png", width=10, height=5, units="in", res=1000)
+#grid.arrange(p, nrow=1)
+PCA
+dev.off()
+```
+
+#-------------------
+# TSNE
+
+```{r}
+
+data_tsne <- Both
+## Rtsne function may take some minutes to complete...
+set.seed(9)  
+## Set dimension
+D=2 #or 3
+tsne_model_1 = Rtsne(as.matrix(data_tsne[,c(3:8)]), check_duplicates=FALSE, pca=TRUE, perplexity=30, theta=0.5, dims=D)
+## getting the two dimension matrix
+d_tsne_1 = as.data.frame(tsne_model_1$Y)  
+
+#set K
+K=8
+plot_cluster=function(data, var_cluster, palette)  
+{
+  ggplot(data, aes_string(x="V1", y="V2", color=var_cluster)) +
+  geom_point(size=0.25) +
+  guides(colour=guide_legend(override.aes=list(size=6))) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=20) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "horizontal", 
+        legend.position = "bottom",
+        legend.box = "horizontal") + 
+#  scale_color_viridis(discrete = TRUE, option = "D")+
+#  scale_fill_viridis(discrete = TRUE)
+    scale_color_brewer(palette = "Dark2")
+    }
+
+## keeping original data
+d_tsne_1_original=d_tsne_1
+
+## Creating k-means clustering model, and assigning the result to the data used to create the tsne
+fit_cluster_kmeans=kmeans(scale(d_tsne_1), K)  
+d_tsne_1_original$cl_kmeans = factor(fit_cluster_kmeans$cluster)
+
+## Creating hierarchical cluster model, and assigning the result to the data used to create the tsne
+fit_cluster_hierarchical=hclust(dist(scale(d_tsne_1)))
+
+## setting 5 clusters as output
+d_tsne_1_original$cl_hierarchical = factor(cutree(fit_cluster_hierarchical, k=K))  
+
+plot_cluster=function(data, var_cluster, palette)  
+{
+  ggplot(data, aes_string(x="V1", y="V2", color=var_cluster)) +
+#  ggrepel::geom_text_repel( aes( label = data_tsne$popID), max.overlaps = 100, size = 2, segment.size = 0.1) +
+  geom_point(size=0.05) +
+  guides(colour=guide_legend(override.aes=list(size=6))) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=20) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "vertical", 
+        legend.text=element_text(size=10),
+        legend.position = "none", #can make right etc.
+       legend.box = "vertical") + 
+#  scale_color_viridis(discrete = TRUE, option = "D")+
+#  scale_fill_viridis(discrete = TRUE)
+    scale_color_brewer(palette = "Dark2")
+    }
+
+plot_k=plot_cluster(d_tsne_1_original, "cl_kmeans", "Accent")  
+plot_h=plot_cluster(d_tsne_1_original, "cl_hierarchical", "Set1")
+
+## and finally: putting the plots side by side with gridExtra lib...
+plot_kmeans <- grid.arrange(plot_k, ncol=1)  
+plot_hierarchical <- grid.arrange(plot_h, ncol=1)  
+#grid.arrange(plot_k, plot_h,  ncol=2)  
+
+
+jpeg(file = "HGDP_1000GP_tsne_plot_kmeans.jpeg", width=10, height=5, units="in", res=1000)
+plot_k
+dev.off()
+
+jpeg(file = "HGDP_1000GP_tsne_plot_hierarchicalclustering.jpeg", width=10, height=5, units="in", res=1000)
+plot_h
+dev.off()
+
+```
+
+
