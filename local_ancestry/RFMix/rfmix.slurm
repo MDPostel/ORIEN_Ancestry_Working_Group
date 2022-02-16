@@ -24,7 +24,8 @@ echo Activating conda py-popgen environment to run beagle and phase VCFs
 #conda create -n py-popgen python=3.7.7
 #conda activate py-popgen
 #conda install -c jaredgk -c bioconda py-popgen
-#conda install -c bioconda java-jdk
+##conda install -c bioconda java-jdk
+#conda install -c anaconda openjdk
 conda activate py-popgen
 #module load bzip2 bcftools htslib openjdk
 
