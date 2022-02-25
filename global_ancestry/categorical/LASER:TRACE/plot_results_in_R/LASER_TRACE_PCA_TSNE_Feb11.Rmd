@@ -483,9 +483,9 @@ PCA <- PCA %>%
 #      )), name = 'West_EUR_HGDPasia')
 
 x <- list(
-  title = "PC1")
-y <- list(
   title = "PC2")
+y <- list(
+  title = "PC3")
 
 
 PCA <- PCA %>% layout(xaxis = x, yaxis = y)
@@ -845,9 +845,9 @@ PCA <- PCA %>%
 #      )), name = 'West_EUR_GP1000asia')
 
 x <- list(
-  title = "PC1")
-y <- list(
   title = "PC2")
+y <- list(
+  title = "PC3")
 
 PCA <- PCA %>% layout(xaxis = x, yaxis = y)
 PCA
@@ -1019,165 +1019,6 @@ PCA <- PCA %>%
         width = 2
       )), name = 'CAS_Both')
 
-
-#EUR_Both 
-PC1_EUR_Both <- EUR_Both$PC1
-PC2_EUR_Both <- EUR_Both$PC2
-PCA <- plot_ly(data = GP1000, type = 'scatter', mode = "markers")
-PCA <- PCA %>%
-  add_markers(
-    x = PC1_EUR_Both, 
-    y = PC2_EUR_Both, 
-    marker = list(
-      color = 'darkgreen',
-      size = 10,
-      opacity = 0.3,
-      line = list(
-        color = '#7f7f7f',
-        width = 2
-      )), name = 'EUR_Both')
-
-
-#AFR_Both
-PC1_AFR_Both <- AFR_Both$PC1
-PC2_AFR_Both <- AFR_Both$PC2
-
-PCA <- PCA %>%
-  add_markers(
-    x = PC1_AFR_Both, 
-    y = PC2_AFR_Both, 
-    marker = list(
-      color = 'firebrick',
-      size = 10,
-      opacity = 0.3,
-      line = list(
-        color = '#7f7f7f',
-        width = 2
-      )), name = 'AFR_Both')
-
-
-#AMR_Both
-PC1_AMR_Both <- AMR_Both$PC1
-PC2_AMR_Both <- AMR_Both$PC2
-
-PCA <- PCA %>%
-  add_markers(
-    x = PC1_AMR_Both, 
-    y = PC2_AMR_Both, 
-    marker = list(
-      color = 'gold',
-      size = 10,
-      opacity = 0.3,
-      line = list(
-        color = '#7f7f7f',
-        width = 2
-      )), name = 'AMR_Both')
-
-
-#OCE_Both --> No Oceania in Both
-#PC1_OCE_Both <- OCE_Both$PC1
-#PC2_OCE_Both <- OCE_Both$PC2
-
-#PCA <- PCA %>%
-#  add_markers(
-#    x = PC1_OCE_Both, 
-#    y = PC2_OCE_Both, 
-#    marker = list(
-#      color = 'blue',
-#      size = 10,
-#      opacity = 0.3,
-#      line = list(
-#        color = '#7f7f7f',
-#        width = 2
-#      )), name = 'OCE_Both')
-
-
-#MDE_Both --> Both doesn't have Middle East
-#PC1_MDE_Both <- MDE_Both$PC1
-#PC2_MDE_Both <- MDE_Both$PC2
-
-#PCA <- PCA %>%
-#  add_markers(
-#    x = PC1_MDE_Both, 
-#    y = PC2_MDE_Both, 
-#    marker = list(
-#      color = 'purple',
-#      size = 10,
-#      opacity = 0.3,
-#      line = list(
-#        color = '#7f7f7f',
-#        width = 2
-#      )), name = 'MDE_Both')
-
-
-#EAS_Both
-PC1_EAS_Both <- EAS_Both$PC1
-PC2_EAS_Both <- EAS_Both$PC2
-
-PCA <- PCA %>%
-  add_markers(
-    x = PC1_EAS_Both, 
-    y = PC2_EAS_Both, 
-    marker = list(
-      color = 'chartreuse',
-      size = 10,
-      opacity = 0.3,
-      line = list(
-        color = '#7f7f7f',
-        width = 2
-      )), name = 'EAS_Both')
-
-
-#SAS_Both
-PC1_SAS_Both <- SAS_Both$PC1
-PC2_SAS_Both <- SAS_Both$PC2
-
-PCA <- PCA %>%
-  add_markers(
-    x = PC1_SAS_Both, 
-    y = PC2_SAS_Both, 
-    marker = list(
-      color = 'deeppink',
-      size = 10,
-      opacity = 0.3,
-      line = list(
-        color = '#7f7f7f',
-        width = 2
-      )), name = 'SAS_Both')
-
-#CAS_Both --> Both doesn't have Central Asia/Siberia
-#PC1_CAS_Both<- CAS_Both$PC1
-#PC2_CAS_Both<- CAS_Both$PC2
-
-#PCA <- PCA %>%
-#  add_markers(
-#    x = PC1_CAS_Both, 
-#    y = PC2_CAS_Both, 
-#    marker = list(
-#      color = 'coral1',
-#      size = 10,
-#      opacity = 0.3,
-#      line = list(
-#        color = '#7f7f7f',
-#        width = 2
-#      )), name = 'CAS_Both')
-
-#West_EUR_Bothasia
-#PC1_West_EUR_Bothasia <- West_EUR_Bothasia$PC1
-#PC2_West_EUR_Bothasia <- West_EUR_Bothasia$PC2
-
-#PCA <- PCA %>%
-#  add_markers(
-#    x = PC1_West_EUR_Bothasia, 
-#    y = PC2_West_EUR_Bothasia, 
-#    marker = list(
-#      color = 'royalblue',
-#      size = 10,
-#      opacity = 0.3,
-#      line = list(
-#        color = '#7f7f7f',
-#        width = 2
-#      )), name = 'West_EUR_Bothasia')
 
 x <- list(
   title = "PC1")
@@ -1351,8 +1192,6 @@ PCA <- PCA %>%
         color = '#7f7f7f',
         width = 2
       )), name = 'CAS_Both')
-
-
 
 
 x <- list(
@@ -1540,7 +1379,6 @@ PCA <- PCA %>%
 #EUR
 PC1_EUR_All <- EUR_All$PC1
 PC2_EUR_All <- EUR_All$PC2
-PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
 PCA <- PCA %>%
   add_markers(
     x = PC1_EUR_All, 
@@ -1679,7 +1517,6 @@ PCA <- PCA %>%
         width = 2
       )), name = 'CAS_All')
 
-
 x <- list(
   title = "PC1")
 y <- list(
@@ -1772,7 +1609,6 @@ PCA <- PCA %>%
 #EUR
 PC2_EUR_All <- EUR_All$PC2
 PC3_EUR_All <- EUR_All$PC3
-PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
 PCA <- PCA %>%
   add_markers(
     x = PC2_EUR_All, 
@@ -2081,7 +1917,6 @@ PCA <- PCA %>%
 #EUR
 PC1_EUR_All <- EUR_All$PC1
 PC2_EUR_All <- EUR_All$PC2
-PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
 PCA <- PCA %>%
   add_markers(
     x = PC1_EUR_All, 
@@ -2388,7 +2223,6 @@ PCA <- PCA %>%
 #EUR
 PC2_EUR_All <- EUR_All$PC2
 PC3_EUR_All <- EUR_All$PC3
-PCA <- plot_ly(data = All, type = 'scatter', mode = "markers")
 PCA <- PCA %>%
   add_markers(
     x = PC2_EUR_All, 
@@ -2550,12 +2384,14 @@ dev.off()
 
 ```{r}
 
+Both <- read.csv('../admix/HGDP_1000GP_Q_K8.csv', header = TRUE)
+
 data_tsne <- Both
 ## Rtsne function may take some minutes to complete...
 set.seed(9)  
 ## Set dimension
 D=2 #or 3
-tsne_model_1 = Rtsne(as.matrix(data_tsne[,c(3:8)]), check_duplicates=FALSE, pca=TRUE, perplexity=30, theta=0.5, dims=D)
+tsne_model_1 = Rtsne(as.matrix(data_tsne[,c(4:11)]), check_duplicates=FALSE, pca=TRUE, perplexity=30, theta=0.5, dims=D)
 ## getting the two dimension matrix
 d_tsne_1 = as.data.frame(tsne_model_1$Y)  
 
@@ -2595,7 +2431,7 @@ d_tsne_1_original$cl_hierarchical = factor(cutree(fit_cluster_hierarchical, k=K)
 plot_cluster=function(data, var_cluster, palette)  
 {
   ggplot(data, aes_string(x="V1", y="V2", color=var_cluster)) +
-#  ggrepel::geom_text_repel( aes( label = data_tsne$popID), max.overlaps = 100, size = 2, segment.size = 0.1) +
+  ggrepel::geom_text_repel( aes( label = data_tsne$pop), max.overlaps = 100, size = 2, segment.size = 0.1) +
   geom_point(size=0.05) +
   guides(colour=guide_legend(override.aes=list(size=6))) +
   xlab("") + ylab("") +
