@@ -348,72 +348,40 @@ fit_cluster_hierarchical=hclust(dist(scale(d_tsne_1)))
 ## setting 8 clusters as output
 d_tsne_1_original$cl_hierarchical = factor(cutree(fit_cluster_hierarchical, k=K))  
 
-#plot_cluster=function(data, var_cluster, palette)  
-#{
-    #color=var_cluster
-#  ggplot(data, aes_string(x="V1", y="V2", color=rainbow((unique(data_tsne$pop))))) +
-#  ggrepel::geom_text_repel( aes( label = data_tsne$pop), max.overlaps = 100, size = 2, segment.size = 0.1) +
-#  geom_point(size=0.05) +
-#  guides(colour=guide_legend(override.aes=list(size=6))) +
-#  xlab("") + ylab("") +
-#  ggtitle("") +
-#  theme_light(base_size=20) +
-#  theme(axis.text.x=element_blank(),
-#        axis.text.y=element_blank(),
-#        legend.direction = "vertical", 
-#        legend.text=element_text(size=10),
-#        legend.position = "right", #can make right, none, etc.
-#       legend.box = "vertical") + 
-#  scale_color_viridis(discrete = TRUE, option = "D")+
-#  scale_fill_viridis(discrete = TRUE)
-#    scale_color_brewer(palette = "Dark2")
-#    }
-
-#plot_k=plot_cluster(d_tsne_1_original, "cl_kmeans", "Accent")  
-#plot_h=plot_cluster(d_tsne_1_original, "cl_hierarchical", "Set1")
-
-## and finally: putting the plots side by side with gridExtra lib...
-#plot_kmeans <- grid.arrange(plot_k, ncol=1)  
-#plot_hierarchical <- grid.arrange(plot_h, ncol=1)  
-##grid.arrange(plot_k, plot_h,  ncol=2)  
-
 #Simpler plot... 
 d_tsne_1_original$pop_label = factor(data_tsne$pop)
-d_tsne_1_original$Superpop_label = factor(data_tsne$Superpop)
-d_tsne_1_original <- d_tsne_1_original[order(d_tsne_1_original$Superpop_label, d_tsne_1_original$pop_label),]
 
-n <- 103
+d_tsne_1_original$pop_label <- factor(d_tsne_1_original$pop_label, levels = c("African Ancestry SW", 	"African Caribbean", 	"Bantu Herero", 	"Bantu Kenya", 	"Bantu South Africa", 	"Bantu Tswana", 	"Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju|'hoan North", 	"Ju|'hoan North,San", 	"Luhya", 	"Mandenka", 	"Mbuti", 	"Mbuti,Mbuti", 	"Mende", 	"Mozabite", 	"San", 	"Yoruba", 	"Mozabite,Mozabite", 	"Colombian", 	"Karitiana", 	"Maya", 	"Mayan,Maya", 	"Mexican Ancestry", 	"Peruvian", 	"Piapoco", 	"Pima", 	"Puerto Rican", 	"Surui", 	"Mongola", 	"Yakut", 	"Balochi", 	"Bengali", 	"Bengali,Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan", 	"Pathan,Pathan", 	"Punjabi", 	"Punjabi,Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", 	"Cambodian,Cambodian", 	"Dai", 	"Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese", 	"Japanese,Japanese", 	"Kinh Vietnamese", 	"Kinh,Kinh Vietnamese", 	"Lahu", 	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", 	"Bedouin", 	"Bedouin B", 	"Bergamo", 	"Bergamo Italian", 	"British", 	"British,English", 	"CEPH", 	"Druze", 	"Finnish", 	"Finnish,Finnish", 	"French", 	"Iberian", 	"Iberian,Spanish", 	"Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", 	"Papuan", 	"Papuan Sepik", 	"Papuan,Papuan Highlands", 	"Papuan,Papuan Sepik"), ordered = TRUE)
+d_tsne_1_original$Superpop_label = factor(data_tsne$Superpop)
+#d_tsne_1_original$pop_label <- fct_reorder2(d_tsne_1_original, d_tsne_1_original$pop_label, d_tsne_1_original$Superpop_label)
+#d_tsne_1_original$pop_label <- reorder(d_tsne_1_original$Superpop_label, d_tsne_1_original$pop_label, FUN = length)
+
+n <- 99
 palette <- distinctColorPalette(n)
+
+#d_tsne_1_original %>%
+#  mutate(pop_label = fct_reorder2(pop_label, Superpop_label))
 
 p <- ggplot(d_tsne_1_original, aes_string(x="V1", y="V2", color="pop_label")) +
   geom_point(size=0.05) +
-  guides(colour=guide_legend(override.aes=list(size=6))) +
+  guides(shape = guide_legend(override.aes = list(size = 1)),
+               color = guide_legend(override.aes = list(size = 1)), fill=guide_legend(ncol=10)) +
   xlab("") + ylab("") +
   ggtitle("") +
-  theme_light(base_size=20) +
+  theme_light(base_size=2) +
   theme(axis.text.x=element_blank(),
         axis.text.y=element_blank(),
         legend.direction = "horizontal", 
-        legend.text=element_text(size=10),
+        legend.text=element_text(size=6),
         legend.position = "bottom", #can make right, none, etc.
-       legend.box = "vertical") + 
+       legend.box = "horizontal", legend.key.size = unit(0.05, "lines"), legend.key.width= unit(1, 'cm')) + 
 #scale_color_viridis(discrete = TRUE, option = "D")+
 #  scale_fill_viridis(discrete = TRUE)
   scale_color_discrete(name="")
 scale_fill_manual(values=distinctColorPalette(length(unique(d_tsne_1_original$pop_label)))) 
 #scale_colour_gradientn(colours=rainbow(4))
 
-addSmallLegend <- function(myPlot, pointSize = 1, textSize = 6, spaceLegend = 0.05) {
-    myPlot +
-        guides(shape = guide_legend(override.aes = list(size = pointSize)),
-               color = guide_legend(override.aes = list(size = pointSize))) +
-        theme(legend.title = element_text(size = textSize), 
-              legend.text  = element_text(size = textSize),
-              legend.key.size = unit(spaceLegend, "lines"))
-}
-
-# Apply on original plot
-addSmallLegend(p)
-
-
+jpeg(file = "K20_seed9_D2_perplexity50_admixture_TSNE.jpeg", width=10, height=5, units="in", res=1000)
+p
+dev.off()
 ```
