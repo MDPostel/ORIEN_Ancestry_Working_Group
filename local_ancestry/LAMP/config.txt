@@ -1,0 +1,43 @@
+# Number of populations
+populations=3
+
+# To use LAMP with ancestral allele frequencies, provide files for allele frequncies for the pure populations
+pfile=pure1.prob,pure2.prob,pure3.prob
+
+#######################################################################
+# Required files
+#######################################################################
+# Genotypes
+#genofile=geno.txt
+
+
+# SNP positions
+#posfile=chr1.pos
+posfile=/home1/mpostel/bin/LAMP2.5/test/chr1.pos
+
+# Output file of inferred ancestries. 
+	# Defaults to "ancestry.txt"
+outputancestryfile=ancestry.txt
+
+#######################################################################
+# Parameters for the windowing scheme
+#######################################################################
+
+# The offset of adjacent windows
+offset=0.2
+
+# Recombination rate
+recombrate=1e-8
+
+# Number of generations
+generations=07
+
+# Alpha (must sum to one)
+alpha=0.8,0.2
+
+
+#######################################################################
+#######################################################################
+# R^2 Cutoff to  use for pruning SNPs
+ldcutoff=0.1
+

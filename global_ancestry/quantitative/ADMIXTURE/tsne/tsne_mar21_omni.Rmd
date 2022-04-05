@@ -1,0 +1,180 @@
+---
+title: "TSNE_Feb23"
+output: html_notebook
+---
+
+Load libraries
+```{r}
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dplyr)
+library(data.table)
+library(tidyverse)
+library(plotly)
+library(plyr)
+library(stringi)
+library(Rtsne)
+library(readr)
+library(viridis)
+library(randomcoloR)
+```
+
+Read in reference population info from IGSR, race/ethnicity info from ORIEN and TCGA.
+```{r}
+
+# https://www.internationalgenome.org/data-portal/data-collection/30x-grch38
+# https://www.internationalgenome.org/data-portal/data-collection/hgdp
+
+#refpops <- read_tsv("igsr_samples3.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+
+refpops_1000GP <- read_tsv("igsr-1000 genomes 30x on grch38.tsv.tsv")
+refpops_igsr <- read_tsv("igsr_samples3.tsv")
+
+refpops_igsr2 <- refpops_igsr[,c(1,5,7)]
+refpops_1000GP2 <- refpops_1000GP[,c(1,5,7)]
+refpops2 <- unique(rbind(refpops_1000GP2,refpops_igsr2))
+names(refpops2)[names(refpops2) == "Sample name"] <- "WES_ID"
+names(refpops2)[names(refpops2) == "Superpopulation name"] <- "Superpop"
+names(refpops2)[names(refpops2) == "Population name"] <- "pop"
+```
+
+Standardize/harmonize and combine fam + Q + pop info
+```{r}
+Q1 <- read.table("omni.20.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("omni.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+#raw_fam1$V1 <- sub("_st_g", "", raw_fam1$V1)
+raw_fam1 <- raw_fam1[,c(1,2)]
+names(raw_fam1)[1] <- "WES_ID"
+raw_fam1$order <- 1:nrow(raw_fam1) 
+Q1$order <- 1:nrow(Q1) 
+omni <- merge(Q1,raw_fam1,by="order")
+omni <- omni[,c(22,2:21)]
+names(omni)[2] <- "Q1"
+names(omni)[3] <- "Q2"
+names(omni)[4] <- "Q3"
+names(omni)[5] <- "Q4"
+names(omni)[6] <- "Q5"
+names(omni)[7] <- "Q6"
+names(omni)[8] <- "Q7"
+names(omni)[9] <- "Q8"
+names(omni)[10] <- "Q9"
+names(omni)[11] <- "Q10"
+names(omni)[12] <- "Q11"
+names(omni)[13] <- "Q12"
+names(omni)[14] <- "Q13"
+names(omni)[15] <- "Q14"
+names(omni)[16] <- "Q15"
+names(omni)[17] <- "Q16"
+names(omni)[18] <- "Q17"
+names(omni)[19] <- "Q18"
+names(omni)[20] <- "Q19"
+names(omni)[21] <- "Q20"
+```
+
+
+```{r}
+omni <- merge(x = omni, y = refpops2, by="WES_ID", all = TRUE)
+omni <- omni[,c(1,22,23,2:21)]
+
+omni <- na.omit(omni) 
+omni <- unique(omni)
+
+```
+
+
+#TSNE
+```{r}
+#So that colors are organized by Superpop (more intuitive)
+omni_sorted <- omni[order(omni$Superpop),]
+data_tsne <- omni_sorted
+
+## Rtsne function may take some minutes to complete...
+set.seed(9)  
+## Set dimension
+D=2 #or 3
+tsne_model_1 = Rtsne(as.matrix(data_tsne[,c(4:23)]), check_duplicates=FALSE, pca=FALSE, perplexity=50, theta=0.0, dims=D)
+data_tsne$pop = as.factor(data_tsne$pop)
+data_tsne$Superpop = as.factor(data_tsne$Superpop)
+#dim(data_tsne)
+
+## getting the two dimension matrix
+d_tsne_1 = as.data.frame(tsne_model_1$Y)  
+
+#set K
+K=20
+
+## keeping original data
+d_tsne_1_original=d_tsne_1
+
+## Creating k-means clustering model, and assigning the result to the data used to create the tsne
+fit_cluster_kmeans=kmeans(scale(d_tsne_1), K)  
+d_tsne_1_original$cl_kmeans = factor(fit_cluster_kmeans$cluster)
+
+## Creating hierarchical cluster model, and assigning the result to the data used to create the tsne
+fit_cluster_hierarchical=hclust(dist(scale(d_tsne_1)))
+
+## setting 8 clusters as output
+d_tsne_1_original$cl_hierarchical = factor(cutree(fit_cluster_hierarchical, k=K))  
+
+#Simpler plot... 
+d_tsne_1_original$pop_label = factor(data_tsne$pop)
+
+d_tsne_1_original$pop_label <- factor(d_tsne_1_original$pop_label, levels = c("African Ancestry SW", 	"African Caribbean", 	"Bantu Herero", 	"Bantu Kenya", 	"Bantu South Africa", 	"Bantu Tswana", 	"Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju|'hoan North", 	"Ju|'hoan North,San", 	"Luhya", 	"Mandenka", 	"Mbuti", 	"Mbuti,Mbuti", 	"Mende", 	"Mozabite", 	"San", 	"Yoruba", 	"Mozabite,Mozabite", 	"Colombian", 	"Karitiana", 	"Maya", 	"Mayan,Maya", 	"Mexican Ancestry", 	"Peruvian", 	"Piapoco", 	"Pima", 	"Puerto Rican", 	"Surui", 	"Mongola", 	"Yakut", 	"Balochi", 	"Bengali", 	"Bengali,Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan", 	"Pathan,Pathan", 	"Punjabi", 	"Punjabi,Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", 	"Cambodian,Cambodian", 	"Dai", 	"Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese", 	"Japanese,Japanese", 	"Kinh Vietnamese", 	"Kinh,Kinh Vietnamese", 	"Lahu", 	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", 	"Bedouin", 	"Bedouin B", 	"Bergamo", 	"Bergamo Italian", 	"British", 	"British,English", 	"CEPH", 	"Druze", 	"Finnish", 	"Finnish,Finnish", 	"French", 	"Iberian", 	"Iberian,Spanish", 	"Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", 	"Papuan", 	"Papuan Sepik", 	"Papuan,Papuan Highlands", 	"Papuan,Papuan Sepik"), ordered = TRUE)
+d_tsne_1_original$Superpop_label = factor(data_tsne$Superpop)
+#d_tsne_1_original$pop_label <- fct_reorder2(d_tsne_1_original, d_tsne_1_original$pop_label, d_tsne_1_original$Superpop_label)
+#d_tsne_1_original$pop_label <- reorder(d_tsne_1_original$Superpop_label, d_tsne_1_original$pop_label, FUN = length)
+
+n <- 99
+palette <- distinctColorPalette(n)
+
+#d_tsne_1_original %>%
+#  mutate(pop_label = fct_reorder2(pop_label, Superpop_label))
+
+p <- ggplot(d_tsne_1_original, aes_string(x="V1", y="V2", color="pop_label")) +
+  geom_point(size=0.05) +
+  guides(shape = guide_legend(override.aes = list(size = 1)),
+               color = guide_legend(override.aes = list(size = 1)), fill=guide_legend(ncol=10)) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=2) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "horizontal", 
+        legend.text=element_text(size=6),
+        legend.position = "bottom", #can make right, none, etc.
+       legend.box = "horizontal", legend.key.size = unit(0.05, "lines"), legend.key.width= unit(1, 'cm')) + 
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#  scale_fill_viridis(discrete = TRUE)
+  scale_color_discrete(name="")
+scale_fill_manual(values=distinctColorPalette(length(unique(d_tsne_1_original$pop_label)))) 
+#scale_colour_gradientn(colours=rainbow(4))
+
+p <- p + ggtitle("TSNE of Admixture Results for Omni 1000GP panel; K=20 D=2, Seed=9, Perplexity=50") + theme(plot.title = element_text(size=10, face="bold.italic")) + theme(plot.title = element_text(hjust = 0.5))
+p
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Omni_Mar23.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+
+PUR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican")
+p2 <- p + geom_point(data=PUR, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05) + ggtitle("TSNE of Admixture Results for K=20; D=2, Seed=9, Perplexity=50")
+p2
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Omni_Mar23_PUR.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+
+MXL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mexican Ancestry")
+p3 <- p + geom_point(data=MXL, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05)
+p3
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Omni_Mar21_MXL.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+
+PEL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Peruvian")
+p4 <- p + geom_point(data=PEL, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05)
+p4
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Omni_Mar23_PEL.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+```
