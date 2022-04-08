@@ -1,0 +1,414 @@
+---
+title: "TSNE_Apr2022"
+output: html_notebook
+---
+
+Load libraries
+```{r}
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dplyr)
+library(data.table)
+library(tidyverse)
+library(plotly)
+library(plyr)
+library(stringi)
+library(Rtsne)
+library(readr)
+library(viridis)
+library(randomcoloR)
+```
+
+#Read in race/ethnicity info from ORIEN and TCGA.
+```{r}
+
+clinlinkage <- read.csv("20PRJ071USC_20210928_ClinicalMolLinkage_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+key_SLID <- subset(clinlinkage, Tumor.Germline == "Germline")
+key_SLID2 <- key_SLID[,c(1,3)]
+demos <- read.csv("20PRJ071USC_20210928_PatientMaster_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+demos2 <- demos[,c(1,5,6)]
+names(key_SLID2)[names(key_SLID2 ) == "ORIENAvatarKey" ] <- "AvatarKey"
+merge <- merge(x = key_SLID2,y = demos2, by='AvatarKey', sort=FALSE, all=TRUE)
+names(merge)[names(merge ) == "WES" ] <- "WES_ID"
+merge2 <- merge[,c(2,3,4)]
+
+USC <-  read.csv("20211203_USC_ClinicalMolLinkage_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+names(USC)[names(USC ) == "ORIENAvatarKey" ] <- "key"
+key <- read.csv("V4_RecordKey_Jan2022.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+names(key)[names(key ) == "Avatar.Patient.ID" ] <- "key"
+key <- key[,c(4,6,7)]
+USC2 <- merge(x=USC, y=key, by="key")
+USC2 <- USC2[,c(4,21,22)]
+names(USC2)[names(USC2 ) == "WES" ] <- "WES_ID"
+all <- bind_rows(merge2,USC2)
+all <- all[-which(all$WES_ID == ""), ]
+
+all[all$Race == "Black",]$Race = "Black_or_African_American"
+all[all$Race == "Unknown/Not Reported",]$Race = "Unknown/Not_Reported"
+all[all$Race == "Other Asian, including Asian, NOS and Oriental, NOS",]$Race = "Asian"
+all[all$Race == "Filipino",]$Race = "Asian"
+all[all$Race == "Chinese",]$Race = "Asian"
+all[all$Race == "Korean",]$Race = "Asian"
+all[all$Race == "American Indian, Aleutian, or Eskimo (includes all indigenous populations of the Western Hemisphere)",]$Race = "American_Indian_or_Alaska_Native"
+all[all$Race == "American Indian, Aleutian, or Eskimo (includes all indigenous populations of the Western hemisphere)",]$Race = "American_Indian_or_Alaska_Native"
+all[all$Race == "Asian Indian or Pakistani, NOS",]$Race = "Asian"
+all[all$Race == "Asian Indian",]$Race = "Asian"
+all[all$Race == "Vietnamese",]$Race = "Asian"
+all[all$Race == "Japanese",]$Race = "Asian"
+all[all$Race == "Pacific Islander, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Unknown/Not Applicable",]$Race = "Unknown/Not_Reported"
+all[all$Race == "Hawaiian",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Laotian",]$Race = "Asian"
+all[all$Race == "Pakistani",]$Race = "Asian"
+all[all$Race == "Kampuchean (Cambodian)",]$Race = "Asian"
+all[all$Race == "Polynesian, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Thai",]$Race = "Asian"
+all[all$Race == "Guamanian, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+
+all[all$Ethnicity == "Non-Spanish; Non-Hispanic",]$Ethnicity = "Not_Hispanic/Not_Latino" 
+all[all$Ethnicity == "Spanish, NOS; Hispanic, NOS; Latino, NOS",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Unknown/Not Reported",]$Ethnicity = "Unknown/Not_Reported"
+all[all$Ethnicity == "Mexican (includes Chicano)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "South or Central American (except Brazil)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Puerto Rican",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Unknown/Not Applicable",]$Ethnicity = "Unknown/Not_Reported"
+all[all$Ethnicity == "Cuban",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Other specified Spanish/Hispanic origin (includes European; excludes Dominican Republic)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Spanish surname only",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Dominican Republic",]$Ethnicity = "Hispanic/Latino"
+
+
+TCGA_race <- read.csv("TCGA_vcfIDs_race_uniq_final.tsv", sep = "\t", header = FALSE, stringsAsFactors = FALSE, fill = TRUE)
+TCGA_ethnicity <- read.csv("TCGA_vcfIDs_ethnicity_uniq_final.tsv", sep = "\t", header = FALSE, stringsAsFactors = FALSE, fill = TRUE)
+names(TCGA_race)[2] <- "Race"
+names(TCGA_ethnicity)[2] <- "Ethnicity"
+names(TCGA_race)[1] <- "WES_ID"
+names(TCGA_ethnicity)[1] <- "WES_ID"
+TCGA <- merge(x = TCGA_race, y = TCGA_ethnicity, by="WES_ID")
+
+merge5 <- bind_rows(TCGA,all)
+
+race <- merge5[,c(1,2)]
+names(race)[names(race) == "Race"] <- "pop"
+ethnicity <- merge5[,c(1,3)]
+names(ethnicity)[names(ethnicity) == "Ethnicity"] <- "pop"
+
+str_replace(race$WES_ID, "_st_g", "")
+str_replace(ethnicity$WES_ID, "_st_g", "")
+```
+
+Read in reference population info from IGSR
+```{r}
+# https://www.internationalgenome.org/data-portal/data-collection/30x-grch38
+# https://www.internationalgenome.org/data-portal/data-collection/hgdp
+
+#refpops <- read_tsv("igsr_samples3.tsv", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+refpops_HGDP <- read_tsv("igsr-human genome diversity project.tsv.tsv")
+refpops_1000GP <- read_tsv("igsr-1000 genomes 30x on grch38.tsv.tsv")
+refpops_igsr <- read_tsv("igsr_samples3.tsv")
+
+refpops_igsr2 <- refpops_igsr[,c(1,5,7)]
+refpops_HGDP2 <- refpops_HGDP[,c(1,5,7)]
+refpops_1000GP2 <- refpops_1000GP[,c(1,5,7)]
+refpops2 <- unique(rbind(refpops_HGDP2,refpops_1000GP2,refpops_igsr2))
+names(refpops2)[names(refpops2) == "Sample name"] <- "WES_ID"
+names(refpops2)[names(refpops2) == "Superpopulation name"] <- "Superpop"
+names(refpops2)[names(refpops2) == "Population name"] <- "pop"
+```
+
+Standardize/harmonize and combine fam + Q + pop info
+```{r}
+Q1 <- read.table("HGDP_1000GP_Apr2022.20.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("HGDP_1000GP_Apr2022.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+raw_fam1$V1 <- sub("_st_g", "", raw_fam1$V1)
+raw_fam1 <- raw_fam1[,c(1,2)]
+names(raw_fam1)[1] <- "WES_ID"
+raw_fam1$order <- 1:nrow(raw_fam1) 
+Q1$order <- 1:nrow(Q1) 
+HGDP_1000GP <- merge(Q1,raw_fam1,by="order")
+HGDP_1000GP <- HGDP_1000GP[,c(22,2:21)]
+names(HGDP_1000GP)[2] <- "Q1"
+names(HGDP_1000GP)[3] <- "Q2"
+names(HGDP_1000GP)[4] <- "Q3"
+names(HGDP_1000GP)[5] <- "Q4"
+names(HGDP_1000GP)[6] <- "Q5"
+names(HGDP_1000GP)[7] <- "Q6"
+names(HGDP_1000GP)[8] <- "Q7"
+names(HGDP_1000GP)[9] <- "Q8"
+names(HGDP_1000GP)[10] <- "Q9"
+names(HGDP_1000GP)[11] <- "Q10"
+names(HGDP_1000GP)[12] <- "Q11"
+names(HGDP_1000GP)[13] <- "Q12"
+names(HGDP_1000GP)[14] <- "Q13"
+names(HGDP_1000GP)[15] <- "Q14"
+names(HGDP_1000GP)[16] <- "Q15"
+names(HGDP_1000GP)[17] <- "Q16"
+names(HGDP_1000GP)[18] <- "Q17"
+names(HGDP_1000GP)[19] <- "Q18"
+names(HGDP_1000GP)[20] <- "Q19"
+names(HGDP_1000GP)[21] <- "Q20"
+```
+
+##ORIEN+TCGA
+```{r}
+Q2 <- read.table("ORIEN_TCGA.20.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam2 <- read.table("ORIEN_TCGA.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+raw_fam2 <- raw_fam2[,c(1,2)]
+names(raw_fam2)[1] <- "WES_ID"
+raw_fam2$order <- 1:nrow(raw_fam2) 
+Q2$order <- 1:nrow(Q2) 
+samples <- merge(Q2,raw_fam2,by="order")
+samples <-samples[,c(22,2:21)]
+names(samples)[2] <- "Q1"
+names(samples)[3] <- "Q2"
+names(samples)[4] <- "Q3"
+names(samples)[5] <- "Q4"
+names(samples)[6] <- "Q5"
+names(samples)[7] <- "Q6"
+names(samples)[8] <- "Q7"
+names(samples)[9] <- "Q8"
+names(samples)[10] <- "Q9"
+names(samples)[11] <- "Q10"
+names(samples)[12] <- "Q11"
+names(samples)[13] <- "Q12"
+names(samples)[14] <- "Q13"
+names(samples)[15] <- "Q14"
+names(samples)[16] <- "Q15"
+names(samples)[17] <- "Q16"
+names(samples)[18] <- "Q17"
+names(samples)[19] <- "Q18"
+names(samples)[20] <- "Q19"
+names(samples)[21] <- "Q20"
+
+Race <- merge(x = samples, y = race, by="WES_ID")
+Race <- Race[,c(1,22,2:21)]
+Race <- unique(Race)
+
+Ethnicity <- merge(x = samples, y = ethnicity, by="WES_ID")
+Ethnicity <- Ethnicity[,c(1,22,2:21)]
+Ethnicity <- unique(Ethnicity)
+
+write.csv(Race, file="Race.csv")
+write.csv(Ethnicity, file="Ethnicity.csv")
+```
+
+HGDP+1000GP
+```{r}
+HGDP_1000GP <- merge(x = HGDP_1000GP, y = refpops2, by="WES_ID", all = TRUE)
+HGDP_1000GP <- HGDP_1000GP[,c(1,22,23,2:21)]
+#Some HGDP individuals are not listed in the igsr manifest for some reason; found them below:
+    #EUR https://web.expasy.org/cellosaurus/CVCL_I521
+    #EUR https://web.expasy.org/cellosaurus/CVCL_I665
+    #EAS https://web.expasy.org/cellosaurus/CVCL_I778
+    #AFR https://web.expasy.org/cellosaurus/CVCL_I927
+    #AMR https://web.expasy.org/cellosaurus/CVCL_I998
+    #AFR https://web.expasy.org/cellosaurus/CVCL_I420
+    #EAS https://web.expasy.org/cellosaurus/CVCL_I481
+HGDP_1000GP[2622,3] = "Europe (HGDP)" #HGDP00521
+HGDP_1000GP[2751,3] = "Europe (HGDP)" #HGDP00665
+HGDP_1000GP[2854,3] = "East Asia (HGDP)" #HGDP00778
+HGDP_1000GP[2969,3] = "Africa (HGDP)" #HGDP00927
+HGDP_1000GP[3032,3] = "America (HGDP)" #HGDP00998
+HGDP_1000GP[3225,3] = "Africa (HGDP)" #HGDP01284
+HGDP_1000GP[3248,3] = "East Asia (HGDP)" #HGDP01307
+
+HGDP_1000GP[2622,2] = "French"	#HGDP00521
+HGDP_1000GP[2751,2] = "Sardinian" #HGDP00665
+HGDP_1000GP[2854,2] = "Han"	#HGDP00778
+HGDP_1000GP[2969,2] = "Yoruba"	#HGDP00927
+HGDP_1000GP[3032,2] = "Karitiana"	#HGDP00998
+HGDP_1000GP[3225,2] = "Mandenka"	#HGDP01284
+HGDP_1000GP[3248,2] = "Dai"	#HGDP01307
+
+HGDP_1000GP <- na.omit(HGDP_1000GP) 
+HGDP_1000GP <- unique(HGDP_1000GP)
+
+```
+
+##Only run if you want to harmonize HGDP w/ 1000GP Superpopulations
+```{r}
+European <- subset(HGDP_1000GP, pop == "European Ancestry")
+European_West_Eurasia_SGDP <- subset(HGDP_1000GP, pop == "European Ancestry,West Eurasia (SGDP)")
+Europe_HGDP <- subset(HGDP_1000GP, pop == "Europe (HGDP)")
+EURa <- subset(HGDP_1000GP, pop == "EUR")
+EUR <- rbind.fill(European, European_West_Eurasia_SGDP, Europe_HGDP, EURa)
+
+East_Asian <- subset(HGDP_1000GP, pop == "East Asian Ancestry")
+East_Asian_SGDP <- subset(HGDP_1000GP, pop == "East Asia (SGDP),East Asian Ancestry")
+East_Asian_HGDP <- subset(HGDP_1000GP, pop == "East Asia (HGDP)")
+East_Asian_SGDP2 <- subset(HGDP_1000GP, pop == "East Asia (SGDP)")
+East_Asian_SGDP_HGDP <- subset(HGDP_1000GP, pop == "East Asia (SGDP),East Asia (HGDP)")
+EASa <- subset(HGDP_1000GP, pop == "EAS")
+EAS <- rbind.fill(East_Asian, East_Asian_HGDP, East_Asian_SGDP, East_Asian_SGDP2, East_Asian_SGDP_HGDP, EASa)
+
+American <- subset(HGDP_1000GP, pop == "American Ancestry")
+America_HGDP <- subset(HGDP_1000GP, pop == "America (HGDP)")
+America_SGDP <- subset(HGDP_1000GP, pop == "America (SGDP)")
+America_SGDP_HGDP <- subset(HGDP_1000GP, pop == "America (SGDP),America (HGDP)")
+AMRa <- subset(HGDP_1000GP, pop == "AMR")
+AMR <- rbind.fill(America_HGDP, America_SGDP, America_SGDP_HGDP, American, AMRa)
+
+South_Asian <- subset(HGDP_1000GP, pop == "South Asian Ancestry")
+South_Asia_SGDP <- subset(HGDP_1000GP, pop == "South Asia (SGDP),South Asian Ancestry")
+Central_South_Asia <- subset(HGDP_1000GP, pop == "Central South Asia (HGDP)")
+South_Asia_SGDP2 <- subset(HGDP_1000GP, pop == "South Asia (SGDP),Central South Asia (HGDP)")
+South_Asia_SGDP3 <- subset(HGDP_1000GP, pop == "South Asia (SGDP)")
+South_Asia_SGDP_Central_South_Asia_HGDP1 <- subset(HGDP_1000GP, pop == "Central South Asia (HGDP)")
+South_Asia_SGDP_Central_South_Asia_HGDP2 <- subset(HGDP_1000GP, pop == "South Asia (SGDP),Central South Asia (HGDP)")
+SAS <- rbind.fill(South_Asian, South_Asia_SGDP, Central_South_Asia, South_Asia_SGDP2, South_Asia_SGDP3, South_Asia_SGDP_Central_South_Asia_HGDP1,South_Asia_SGDP_Central_South_Asia_HGDP2)
+
+African <- subset(HGDP_1000GP, pop == "African Ancestry")
+African_SGDP <- subset(HGDP_1000GP, pop == "African Ancestry,Africa (SGDP)")
+Africa_HGDP <- subset(HGDP_1000GP, pop == "Africa (HGDP)")
+African_SGDP2 <- subset(HGDP_1000GP, pop == "Africa (SGDP)")
+African_SGDP_HGDP <- subset(HGDP_1000GP, pop == "Africa (SGDP),Africa (HGDP)")
+AFRa <- subset(HGDP_1000GP, pop == "AFR")
+AFR <- rbind.fill(Africa_HGDP, African, African_SGDP, African_SGDP_HGDP, African_SGDP2, AFRa)
+
+Oceania_HGDP_SGDP <- subset(HGDP_1000GP, pop == "Oceania (SGDP),Oceania (HGDP)")
+Oceania_HGDP <- subset(HGDP_1000GP, pop == "Oceania (HGDP)")
+Oceania_SGDP <- subset(HGDP_1000GP, pop == "Oceania (SGDP)")
+OCE <- rbind.fill(Oceania_HGDP, Oceania_HGDP_SGDP, Oceania_SGDP)
+
+Middle_East_HGDP <- subset(HGDP_1000GP, pop == "Middle East (HGDP)")
+Middle_East_HGDP_Africa_SGDP <- subset(HGDP_1000GP, pop == "Middle East (HGDP),Africa (SGDP)")
+West_Eurasia <- subset(HGDP_1000GP, pop == "West Eurasia (SGDP)")
+MDE <- rbind.fill(Middle_East_HGDP, Middle_East_HGDP_Africa_SGDP, West_Eurasia)
+
+CAS <- subset(HGDP_1000GP, pop == "Central Asia and Siberia (SGDP)")
+
+EUR[EUR$pop == "European Ancestry",]$pop = "EUR"
+EUR[EUR$pop == "Europe (HGDP)",]$pop = "EUR"
+EUR[EUR$pop == "European Ancestry,West Eurasia (SGDP)",]$pop = "EUR"
+
+AFR[AFR$pop == "Africa (HGDP)",]$pop = "AFR"
+AFR[AFR$pop == "African Ancestry",]$pop = "AFR"
+AFR[AFR$pop == "African Ancestry,Africa (SGDP)",]$pop = "AFR"
+AFR[AFR$pop == "Africa (SGDP)",]$pop = "AFR"
+AFR[AFR$pop == "Africa (SGDP),Africa (HGDP)",]$pop = "AFR"
+
+AMR[AMR$pop == "America (HGDP)",]$pop = "AMR"
+AMR[AMR$pop == "American Ancestry",]$pop = "AMR"
+AMR[AMR$pop == "America (SGDP),America (HGDP)",]$pop = "AMR"
+AMR[AMR$pop == "America (SGDP)",]$pop = "AMR"
+
+SAS[SAS$pop == "South Asian Ancestry",]$pop = "SAS"
+SAS[SAS$pop == "Central South Asia (HGDP)",]$pop = "SAS"
+SAS[SAS$pop == "South Asia (SGDP),South Asian Ancestry",]$pop = "SAS"
+SAS[SAS$pop == "South Asia (SGDP)",]$pop = "SAS"
+SAS[SAS$pop == "South Asia (SGDP),Central South Asia (HGDP)",]$pop = "SAS"
+
+EAS[EAS$pop == "East Asian Ancestry",]$pop = "EAS"
+EAS[EAS$pop == "East Asia (SGDP),East Asian Ancestry",]$pop = "EAS"
+EAS[EAS$pop == "East Asia (HGDP)",]$pop = "EAS"
+EAS[EAS$pop == "East Asia (SGDP)",]$pop = "EAS"
+EAS[EAS$pop == "East Asia (SGDP),East Asia (HGDP)",]$pop = "EAS"
+
+OCE[OCE$pop == "Oceania (HGDP)",]$pop = "OCE"
+OCE[OCE$pop == "Oceania (SGDP),Oceania (HGDP)",]$pop = "OCE"
+OCE[OCE$pop == "Oceania (SGDP)",]$pop = "OCE"
+
+MDE[MDE$pop == "Middle East (HGDP)",]$pop = "MDE"
+MDE[MDE$pop == "West Eurasia (SGDP)",]$pop = "MDE"
+MDE[MDE$pop == "Middle East (HGDP),Africa (SGDP)",]$pop = "MDE"
+
+CAS[CAS$pop == "Central Asia and Siberia (SGDP)",]$pop = "CAS"
+
+```
+
+TSNE
+```{r}
+#So that colors are organized by Superpop (more intuitive)
+HGDP_1000GP_sorted <- HGDP_1000GP[order(HGDP_1000GP$Superpop),]
+data_tsne <- HGDP_1000GP_sorted
+
+## Rtsne function may take some minutes to complete...
+set.seed(9)  
+## Set dimension
+D=2 #or 3
+tsne_model_1 = Rtsne(as.matrix(data_tsne[,c(4:23)]), check_duplicates=FALSE, pca=FALSE, perplexity=50, theta=0.0, dims=D)
+data_tsne$pop = as.factor(data_tsne$pop)
+data_tsne$Superpop = as.factor(data_tsne$Superpop)
+#dim(data_tsne)
+
+## getting the two dimension matrix
+d_tsne_1 = as.data.frame(tsne_model_1$Y)  
+
+#set K
+K=20
+
+## keeping original data
+d_tsne_1_original=d_tsne_1
+
+## Creating k-means clustering model, and assigning the result to the data used to create the tsne
+fit_cluster_kmeans=kmeans(scale(d_tsne_1), K)  
+d_tsne_1_original$cl_kmeans = factor(fit_cluster_kmeans$cluster)
+
+## Creating hierarchical cluster model, and assigning the result to the data used to create the tsne
+fit_cluster_hierarchical=hclust(dist(scale(d_tsne_1)))
+
+## setting 8 clusters as output
+d_tsne_1_original$cl_hierarchical = factor(cutree(fit_cluster_hierarchical, k=K))  
+
+#Simpler plot... 
+d_tsne_1_original$pop_label = factor(data_tsne$pop)
+
+d_tsne_1_original$pop_label <- factor(d_tsne_1_original$pop_label, levels = c("African Ancestry SW", 	"African Caribbean", 	"Bantu Herero", 	"Bantu Kenya", 	"Bantu South Africa", 	"Bantu Tswana", 	"Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju|'hoan North", 	"Ju|'hoan North,San", 	"Luhya", 	"Mandenka", 	"Mbuti", 	"Mbuti,Mbuti", 	"Mende", 	"Mozabite", 	"San", 	"Yoruba", 	"Mozabite,Mozabite", 	"Colombian", 	"Karitiana", 	"Maya", 	"Mayan,Maya", 	"Mexican Ancestry", 	"Peruvian", 	"Piapoco", 	"Pima", 	"Puerto Rican", 	"Surui", 	"Mongola", 	"Yakut", 	"Balochi", 	"Bengali", 	"Bengali,Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan", 	"Pathan,Pathan", 	"Punjabi", 	"Punjabi,Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", 	"Cambodian,Cambodian", 	"Dai", 	"Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese", 	"Japanese,Japanese", 	"Kinh Vietnamese", 	"Kinh,Kinh Vietnamese", 	"Lahu", 	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", 	"Bedouin", 	"Bedouin B", 	"Bergamo", 	"Bergamo Italian", 	"British", 	"British,English", 	"CEPH", 	"Druze", 	"Finnish", 	"Finnish,Finnish", 	"French", 	"Iberian", 	"Iberian,Spanish", 	"Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", 	"Papuan", 	"Papuan Sepik", 	"Papuan,Papuan Highlands", 	"Papuan,Papuan Sepik"), ordered = TRUE)
+d_tsne_1_original$Superpop_label = factor(data_tsne$Superpop)
+#d_tsne_1_original$pop_label <- fct_reorder2(d_tsne_1_original, d_tsne_1_original$pop_label, d_tsne_1_original$Superpop_label)
+#d_tsne_1_original$pop_label <- reorder(d_tsne_1_original$Superpop_label, d_tsne_1_original$pop_label, FUN = length)
+
+n <- 99
+palette <- distinctColorPalette(n)
+
+#d_tsne_1_original %>%
+#  mutate(pop_label = fct_reorder2(pop_label, Superpop_label))
+
+p <- ggplot(d_tsne_1_original, aes_string(x="V1", y="V2", color="pop_label")) +
+  geom_point(size=0.05) +
+  guides(shape = guide_legend(override.aes = list(size = 1)),
+               color = guide_legend(override.aes = list(size = 1)), fill=guide_legend(ncol=10)) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=2) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "horizontal", 
+        legend.text=element_text(size=6),
+        legend.position = "bottom", #can make right, none, etc.
+       legend.box = "horizontal", legend.key.size = unit(0.05, "lines"), legend.key.width= unit(1, 'cm')) + 
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#  scale_fill_viridis(discrete = TRUE)
+  scale_color_discrete(name="")
+scale_fill_manual(values=distinctColorPalette(length(unique(d_tsne_1_original$pop_label)))) 
+#scale_colour_gradientn(colours=rainbow(4))
+
+p <- p + ggtitle("TSNE of Admixture Results for K=20; D=2, Seed=9, Perplexity=50") + theme(plot.title = element_text(size=10, face="bold.italic")) + theme(plot.title = element_text(hjust = 0.5))
+p
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Apr2022.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+
+PUR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican")
+p2 <- p + geom_point(data=PUR, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05) + ggtitle("TSNE of Admixture Results for K=20; D=2, Seed=9, Perplexity=50")
+p2
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Apr2022_PUR.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+
+MXL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mexican Ancestry")
+p3 <- p + geom_point(data=MXL, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05)
+p3
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Apr2022_MXL.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+
+PEL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Peruvian")
+p4 <- p + geom_point(data=PEL, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05)
+p4
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Apr2022_PEL.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+```

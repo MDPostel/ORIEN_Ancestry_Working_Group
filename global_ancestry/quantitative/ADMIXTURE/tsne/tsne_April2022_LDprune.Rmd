@@ -1,5 +1,5 @@
 ---
-title: "TSNE_Apr2022"
+title: "TSNE_Apr2022_LDprune"
 output: html_notebook
 ---
 
@@ -119,7 +119,7 @@ names(refpops2)[names(refpops2) == "Population name"] <- "pop"
 
 Standardize/harmonize and combine fam + Q + pop info
 ```{r}
-Q1 <- read.table("HGDP_1000GP_Apr2022.20.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+Q1 <- read.table("HGDP_1000GP_Apr2022_LDfilter0.6.20.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
 raw_fam1 <- read.table("HGDP_1000GP_Apr2022.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
 raw_fam1$V1 <- sub("_st_g", "", raw_fam1$V1)
 raw_fam1 <- raw_fam1[,c(1,2)]
@@ -386,7 +386,7 @@ scale_fill_manual(values=distinctColorPalette(length(unique(d_tsne_1_original$po
 
 p <- p + ggtitle("TSNE of Admixture Results for K=20; D=2, Seed=9, Perplexity=50") + theme(plot.title = element_text(size=10, face="bold.italic")) + theme(plot.title = element_text(hjust = 0.5))
 p
-ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Mar21.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Apr2022_LDprune.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
 
 PUR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican")
 p2 <- p + geom_point(data=PUR, 
@@ -394,7 +394,7 @@ p2 <- p + geom_point(data=PUR,
              color='black', 
              size=0.05) + ggtitle("TSNE of Admixture Results for K=20; D=2, Seed=9, Perplexity=50")
 p2
-ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Mar21_PUR.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Apr2022_PUR_LDprune.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
 
 MXL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mexican Ancestry")
 p3 <- p + geom_point(data=MXL, 
@@ -402,7 +402,7 @@ p3 <- p + geom_point(data=MXL,
              color='black', 
              size=0.05)
 p3
-ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Mar21_MXL.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Apr2022_MXL_LDprune.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
 
 PEL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Peruvian")
 p4 <- p + geom_point(data=PEL, 
@@ -410,5 +410,5 @@ p4 <- p + geom_point(data=PEL,
              color='black', 
              size=0.05)
 p4
-ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Mar21_PEL.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
+ggsave("K20_seed9_D2_perplexity50_admixture_TSNE_Apr2022_PEL_LDprune.jpeg", width=10, height=5, units="in", res=1000, device = jpeg)
 ```
