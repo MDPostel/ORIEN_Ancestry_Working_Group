@@ -111,13 +111,19 @@ tabix -f ${prefix3}_re-sorted_March2022.vcf.gz
 
 
 #------
-#FILTER FOR PER-COHORT MISSINGNESS <=10%, MAF >=.01 FOR REFERENCES DATASETS, SNPS ONLY
+#IMPUTE, FILTER FOR PER-COHORT MISSINGNESS <=20%, MAF >=.01 FOR REFERENCES DATASETS, SNPS ONLY
 cd /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/
 
 GP1000=$(echo ${prefix3}_re-sorted_March2022.vcf.gz)
 bcftools view $GP1000 -m2 -M2 -v snps | bcftools view -V indels -e 'MAF<0.01' -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz --threads $t
 bcftools index -t -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz --threads $t
-GP1000_2=$(echo "GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz")
+
+echo "imputing"
+module load gcc/11.2.0 jdk/17.0.1
+/spack/apps2/linux-centos7-x86_64/gcc-11.2.0/jdk-17.0.1-6rjjefs2zw3fedmia6auq5dtifvprffc/bin/java -jar /home1/mpostel/bin/beagle/beagle.25Mar22.4f6.jar gt=GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz out=GP1000_merged_ALLchr_snps_maf1_impute_March2022 nthreads=50
+
+GP1000_2=$(echo "GP1000_merged_ALLchr_snps_maf1_impute_March2022.vcf.gz")
+bcftools index -t -f $GP1000_2 --threads $t
 
 bcftools view -e 'F_MISSING>0.20' -V indels $GP1000_2 -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz
 bcftools index -t -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz --threads $t
@@ -196,8 +202,8 @@ $gatk ApplyVQSR \
 bgzip -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf
 bcftools index -t -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz --threads $t
 
-##bcftools view -i '%FILTER=="PASS" || %FILTER=="VQSRTrancheSNP90.00to90.50" || %FILTER=="VQSRTrancheSNP90.50to91.00" || %FILTER=="VQSRTrancheSNP91.00to91.50" || %FILTER=="VQSRTrancheSNP91.50to92.00" || %FILTER=="VQSRTrancheSNP92.00to92.50" || %FILTER=="VQSRTrancheSNP92.50to93.00" || %FILTER=="VQSRTrancheSNP93.00to93.50" || %FILTER=="VQSRTrancheSNP93.50to94.00" || %FILTER=="VQSRTrancheSNP94.00to94.50" || %FILTER=="VQSRTrancheSNP94.50to95.00" || %FILTER=="VQSRTrancheSNP95.00to95.50" || %FILTER=="VQSRTrancheSNP95.50to96.00" || %FILTER=="VQSRTrancheSNP96.00to96.50" || %FILTER=="VQSRTrancheSNP96.50to97.00" || %FILTER=="VQSRTrancheSNP97.00to97.50" || %FILTER=="VQSRTrancheSNP97.50to98.00" || %FILTER=="VQSRTrancheSNP98.00to98.50" || %FILTER=="VQSRTrancheSNP98.50to99.00"' GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASSplusTopTranches.vcf.gz
+bcftools view -i '%FILTER=="PASS" || %FILTER=="VQSRTrancheSNP90.00to90.50" || %FILTER=="VQSRTrancheSNP90.50to91.00" || %FILTER=="VQSRTrancheSNP91.00to91.50" || %FILTER=="VQSRTrancheSNP91.50to92.00" || %FILTER=="VQSRTrancheSNP92.00to92.50" || %FILTER=="VQSRTrancheSNP92.50to93.00" || %FILTER=="VQSRTrancheSNP93.00to93.50" || %FILTER=="VQSRTrancheSNP93.50to94.00" || %FILTER=="VQSRTrancheSNP94.00to94.50" || %FILTER=="VQSRTrancheSNP94.50to95.00" || %FILTER=="VQSRTrancheSNP95.00to95.50" || %FILTER=="VQSRTrancheSNP95.50to96.00" || %FILTER=="VQSRTrancheSNP96.00to96.50" || %FILTER=="VQSRTrancheSNP96.50to97.00" || %FILTER=="VQSRTrancheSNP97.00to97.50" || %FILTER=="VQSRTrancheSNP97.50to98.00" || %FILTER=="VQSRTrancheSNP98.00to98.50" || %FILTER=="VQSRTrancheSNP98.50to99.00"' GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASSplusTopTranches.vcf.gz
 
-bcftools view -i '%FILTER=="PASS" || %FILTER=="VQSRTrancheSNP99.00to99.50" || %FILTER=="VQSRTrancheSNP99.50to99.90" || %FILTER=="VQSRTrancheSNP99.90to99.95" || %FILTER=="VQSRTrancheSNP99.95to100.00+" || %FILTER=="VQSRTrancheSNP99.95to100.00"' GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASSplusTopTranches.vcf.gz
+#bcftools view -i '%FILTER=="PASS" || %FILTER=="VQSRTrancheSNP99.00to99.50" || %FILTER=="VQSRTrancheSNP99.50to99.90" || %FILTER=="VQSRTrancheSNP99.90to99.95" || %FILTER=="VQSRTrancheSNP99.95to100.00+" || %FILTER=="VQSRTrancheSNP99.95to100.00"' GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASSplusTopTranches.vcf.gz
 
 bcftools index -t -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASSplusTopTranches.vcf.gz --threads $t

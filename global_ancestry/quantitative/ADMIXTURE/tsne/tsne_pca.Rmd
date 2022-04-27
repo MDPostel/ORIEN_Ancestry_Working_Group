@@ -1,0 +1,526 @@
+---
+title: "Genotypes --> Plink PCA --> RTSNE"
+output: html_notebook
+---
+
+
+ORIEN+HGDP+1000GP
+```{r}
+rm(list=ls()) 
+
+#PCAs <- read.csv("plink.eigenvec", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+PCAs <- read.csv("HGDP_1000GP_ORIEN-PR_isec_Apr24_impute.mds", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+names(PCAs)[1] <- "WES_ID"
+PCAs <- PCAs[,c(1,4:103)]
+IDs <- read.csv("tsne_samples_ref_info.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+IDs <- IDs[,c(2,3)]
+df <- merge(PCAs, IDs, by="WES_ID", all = FALSE)
+data_tsne <- df[,c(1,102,2:101)]
+
+set.seed(9)  
+D=3 #or 3
+P=10
+K=20
+
+tsne_model_1 = Rtsne(as.matrix(data_tsne[3:22]), check_duplicates=FALSE, pca=FALSE, perplexity=P, theta=0.0, dims=D)
+
+data_tsne$pop = as.factor(data_tsne$pop)
+d_tsne_1 = as.data.frame(tsne_model_1$Y)  
+d_tsne_1_original=d_tsne_1
+
+d_tsne_1_original$pop_label = factor(data_tsne$pop)
+
+#switched Biaka and PR ORIEN
+d_tsne_1_original$pop_label <- factor(d_tsne_1_original$pop_label, levels = c("African Ancestry SW", 	"African Caribbean", 	"Bantu Herero", 	"Bantu Kenya", 	"Bantu South Africa", 	"Bantu Tswana", 	"Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju|'hoan North", 	"Ju|'hoan North,San", 	"San", "Luhya", 	"Mandenka", 	"Mbuti", 	"Mbuti,Mbuti", 	"Mende", 	"Mozabite", 	"Mozabite,Mozabite", 	"Yoruba", 	"Colombian", 	"Karitiana", 	"Maya", 	"Mayan,Maya", 	"Mexican Ancestry", 	"Peruvian", 	"Piapoco", 	"Pima", 	"Puerto Rican", "Surui", 	"Mongola", 	"Yakut", 	"Balochi", 	"Bengali", 	"Bengali,Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan", 	"Pathan,Pathan", 	"Punjabi", 	"Punjabi,Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", 	"Cambodian,Cambodian", 	"Dai", 	"Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese", 	"Japanese,Japanese", 	"Kinh Vietnamese", 	"Kinh,Kinh Vietnamese", 	"Lahu",	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", 	"Bedouin", 	"Bedouin B", 	"Bergamo", 	"Bergamo Italian", "British", 	"British,English", 	"CEPH", 	"Druze", 	"Finnish", 	"Finnish,Finnish", 	"French", 	"Iberian", 	"Iberian,Spanish", 	"Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", 	"Papuan", 	"Papuan Sepik", 	"Papuan,Papuan Highlands", 	"Papuan,Papuan Sepik", "Puerto Rican (ORIEN)"), ordered = TRUE)
+#d_tsne_1_original$Superpop_label = factor(data_tsne$Superpop)
+#d_tsne_1_original$pop_label <- fct_reorder2(d_tsne_1_original, d_tsne_1_original$pop_label, d_tsne_1_original$Superpop_label)
+#d_tsne_1_original$pop_label <- reorder(d_tsne_1_original$Superpop_label, d_tsne_1_original$pop_label, FUN = length)
+
+n <- 99
+palette <- distinctColorPalette(n, runTsne = TRUE)
+
+#d_tsne_1_original %>%
+#  mutate(pop_label = fct_reorder2(pop_label, Superpop_label))
+
+p <- ggplot(d_tsne_1_original, aes_string(x="V1", y="V2", color="pop_label")) +
+  geom_point(size=0.05) +
+  guides(shape = guide_legend(override.aes = list(size = 1)),
+               color = guide_legend(override.aes = list(size = 1)), fill=guide_legend(ncol=10)) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=2) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "horizontal", 
+        legend.text=element_text(size=5),
+        legend.position = "bottom", #can make right, none, etc.
+       legend.box = "vertical", legend.key.size = unit(0.5, "lines"), legend.key.width= unit(1, 'cm')) + 
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#  scale_fill_viridis(discrete = TRUE)
+  scale_color_discrete(name="")
+scale_fill_manual(values=distinctColorPalette(length(unique(d_tsne_1_original$pop_label)))) 
+#scale_colour_gradientn(colours=rainbow(4))
+
+p <- p + ggtitle("TSNE of Plink PCA/MDS of Genotypes for K=20; D=3, Seed=9, perplexity=10, PCA=FALSE") + theme(plot.title = element_text(size=10, face="bold.italic")) + theme(plot.title = element_text(hjust = 0.5))
+p
+ggsave("K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PR_PCAfalse.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+gg <- ggplotly(p, dynamicTicks = "y")
+style(gg, hoveron = "points", hoverinfo = "x+y+text", hoverlabel = list(bgcolor = "white"))
+htmlwidgets::saveWidget(as_widget(gg), "K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PR_PCAfalse.html")
+
+PUR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican")
+#p2 <- p + geom_point(data=PUR, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05) 
+#p2
+
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PUR.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+PUR2 <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican (ORIEN)")
+#p3 <- p + geom_point(data=PUR2, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p3
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PUR-ORIEN.jpeg", #width=10, height=10, units="in", res=1000, device = jpeg)
+
+MXL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mexican Ancestry")
+#p3 <- p + geom_point(data=MXL, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p3
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_MXL.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+PEL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Peruvian")
+#p4 <- p + geom_point(data=PEL, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p4
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PEL.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+MAY <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Maya" | d_tsne_1_original$pop_label == "Mayan,Maya")
+CLM <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Colombian")
+KAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Karitiana")
+GBR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "British" | d_tsne_1_original$pop_label == "British,English")
+BSQ <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Basque")
+IBE <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Iberian" | d_tsne_1_original$pop_label == "Iberian,Spanish")
+CEPH <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "CEPH")
+FRE <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "French")
+SAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Sardinian")
+AFR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "African Ancestry SW")
+CAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "African Caribbean")
+TUSC <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Tuscan" | d_tsne_1_original$pop_label == "Toscani")
+BERG <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Bergamo" | d_tsne_1_original$pop_label == "Bergamo Italian")
+MOZ <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mozabite")
+p5 <- p + geom_point(data=PUR, 
+             aes_string(x="V1", y="V2"),
+             color='yellow', 
+             size=0.05) + geom_point(data=PUR2, 
+             aes_string(x="V1", y="V2"),
+             color='gold', 
+             size=0.05) + geom_point(data=PEL, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05, shape=21) + geom_point(data=MXL, 
+             aes_string(x="V1", y="V2"),
+             color='darkviolet', 
+             size=0.05, shape=10) + geom_point(data=MAY, 
+             aes_string(x="V1", y="V2"),
+             color='chartreuse', 
+             size=0.05, shape=10) + geom_point(data=CLM, 
+             aes_string(x="V1", y="V2"),
+             color='mediumblue', 
+             size=0.05, shape=10) + geom_point(data=IBE, 
+             aes_string(x="V1", y="V2"),
+             color='red', 
+             size=0.05, shape=10) + geom_point(data=BSQ, 
+             aes_string(x="V1", y="V2"),
+             color='red4', 
+             size=0.05, shape=10) + geom_point(data=CEPH, 
+             aes_string(x="V1", y="V2"),
+             color='springgreen1', 
+             size=0.05, shape=10) + geom_point(data=FRE, 
+             aes_string(x="V1", y="V2"),
+             color='darkorange1', 
+             size=0.05, shape=10) + geom_point(data=SAR, 
+             aes_string(x="V1", y="V2"),
+             color='turquoise1', 
+             size=0.05, shape=10) + geom_point(data=AFR, 
+             aes_string(x="V1", y="V2"),
+             color='slateblue1', 
+             size=0.05, shape=10) + geom_point(data=CAR, 
+             aes_string(x="V1", y="V2"),
+             color='violetred1', 
+             size=0.05, shape=10) + geom_point(data=TUSC, 
+             aes_string(x="V1", y="V2"),
+             color='hotpink', 
+             size=0.05, shape=10) + geom_point(data=BERG, 
+             aes_string(x="V1", y="V2"),
+             color='deeppink4', 
+             size=0.05, shape=10) + geom_point(data=KAR, 
+             aes_string(x="V1", y="V2"),
+             color='firebrick1', 
+             size=0.05, shape=10) + geom_point(data=GBR, 
+             aes_string(x="V1", y="V2"),
+             color='bisque4', 
+             size=0.05, shape=10) + geom_point(data=MOZ, 
+             aes_string(x="V1", y="V2"),
+             color='lightpink', 
+             size=0.05, shape=10)
+p5
+ggsave("K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PCAfalse_highlightLatino.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+gg <- ggplotly(p5, dynamicTicks = "y")
+style(gg, hoveron = "points", hoverinfo = "x+y+text", hoverlabel = list(bgcolor = "white"))
+htmlwidgets::saveWidget(as_widget(gg), "K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PCAfalse_highlightLatino.html")
+```
+
+
+Just 1000GP
+```{r}
+rm(list=ls()) 
+
+#PCAs <- read.csv("plink.eigenvec", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+PCAs2 <- read.csv("GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_impute_missing20_VQSRPASSplusTopTranches.mds", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+names(PCAs2)[1] <- "WES_ID"
+PCAs2 <- PCAs2[,c(1,4:103)]
+IDs2 <- read.csv("tsne_samples_ref_info.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+IDs2 <- IDs2[,c(2,3)]
+df2 <- merge(PCAs2, IDs2, by="WES_ID", all = FALSE)
+data_tsne <- df2[,c(1,102,2:101)]
+
+set.seed(9)  
+D=3 #or 3
+P=10
+K=20
+
+tsne_model_1 = Rtsne(as.matrix(data_tsne[3:22]), check_duplicates=FALSE, pca=FALSE, perplexity=P, theta=0.0, dims=D)
+
+data_tsne$pop = as.factor(data_tsne$pop)
+d_tsne_1 = as.data.frame(tsne_model_1$Y)  
+d_tsne_1_original=d_tsne_1
+
+d_tsne_1_original$pop_label = factor(data_tsne$pop)
+
+#switched Biaka and PR ORIEN
+d_tsne_1_original$pop_label <- factor(d_tsne_1_original$pop_label, levels = c("African Ancestry SW", 	"African Caribbean", 	"Bantu Herero", 	"Bantu Kenya", 	"Bantu South Africa", 	"Bantu Tswana", 	"Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju|'hoan North", 	"Ju|'hoan North,San", 	"San", "Luhya", 	"Mandenka", 	"Mbuti", 	"Mbuti,Mbuti", 	"Mende", 	"Mozabite", 	"Mozabite,Mozabite", 	"Yoruba", 	"Colombian", 	"Karitiana", 	"Maya", 	"Mayan,Maya", 	"Mexican Ancestry", 	"Peruvian", 	"Piapoco", 	"Pima", 	"Puerto Rican", "Surui", 	"Mongola", 	"Yakut", 	"Balochi", 	"Bengali", 	"Bengali,Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan", 	"Pathan,Pathan", 	"Punjabi", 	"Punjabi,Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", 	"Cambodian,Cambodian", 	"Dai", 	"Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese", 	"Japanese,Japanese", 	"Kinh Vietnamese", 	"Kinh,Kinh Vietnamese", 	"Lahu",	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", 	"Bedouin", 	"Bedouin B", 	"Bergamo", 	"Bergamo Italian", "British", 	"British,English", 	"CEPH", 	"Druze", 	"Finnish", 	"Finnish,Finnish", 	"French", 	"Iberian", 	"Iberian,Spanish", 	"Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", 	"Papuan", 	"Papuan Sepik", 	"Papuan,Papuan Highlands", 	"Papuan,Papuan Sepik"), ordered = TRUE)
+#d_tsne_1_original$Superpop_label = factor(data_tsne$Superpop)
+#d_tsne_1_original$pop_label <- fct_reorder2(d_tsne_1_original, d_tsne_1_original$pop_label, d_tsne_1_original$Superpop_label)
+#d_tsne_1_original$pop_label <- reorder(d_tsne_1_original$Superpop_label, d_tsne_1_original$pop_label, FUN = length)
+
+n <- 99
+palette <- distinctColorPalette(n, runTsne = TRUE)
+
+#d_tsne_1_original %>%
+#  mutate(pop_label = fct_reorder2(pop_label, Superpop_label))
+
+p <- ggplot(d_tsne_1_original, aes_string(x="V1", y="V2", color="pop_label")) +
+  geom_point(size=0.05) +
+  guides(shape = guide_legend(override.aes = list(size = 1)),
+               color = guide_legend(override.aes = list(size = 1)), fill=guide_legend(ncol=10)) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=2) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "horizontal", 
+        legend.text=element_text(size=5),
+        legend.position = "bottom", #can make right, none, etc.
+       legend.box = "vertical", legend.key.size = unit(0.5, "lines"), legend.key.width= unit(1, 'cm')) + 
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#  scale_fill_viridis(discrete = TRUE)
+  scale_color_discrete(name="")
+scale_fill_manual(values=distinctColorPalette(length(unique(d_tsne_1_original$pop_label)))) 
+#scale_colour_gradientn(colours=rainbow(4))
+
+p <- p + ggtitle("TSNE of Plink PCA/MDS of Genotypes for K=20; D=3, Seed=9, perplexity=10, PCA=FALSE") + theme(plot.title = element_text(size=10, face="bold.italic")) + theme(plot.title = element_text(hjust = 0.5))
+p
+ggsave("1000GPonly_K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PR_PCAfalse.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+gg <- ggplotly(p, dynamicTicks = "y")
+style(gg, hoveron = "points", hoverinfo = "x+y+text", hoverlabel = list(bgcolor = "white"))
+htmlwidgets::saveWidget(as_widget(gg), "1000GPonly_K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PR_PCAfalse.html")
+
+PUR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican")
+#p2 <- p + geom_point(data=PUR, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05) 
+#p2
+
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PUR.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+#PUR2 <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican (ORIEN)")
+#p3 <- p + geom_point(data=PUR2, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p3
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PUR-ORIEN.jpeg", #width=10, height=10, units="in", res=1000, device = jpeg)
+
+MXL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mexican Ancestry")
+#p3 <- p + geom_point(data=MXL, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p3
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_MXL.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+PEL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Peruvian")
+#p4 <- p + geom_point(data=PEL, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p4
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PEL.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+MAY <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Maya" | d_tsne_1_original$pop_label == "Mayan,Maya")
+CLM <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Colombian")
+KAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Karitiana")
+GBR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "British" | d_tsne_1_original$pop_label == "British,English")
+BSQ <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Basque")
+IBE <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Iberian" | d_tsne_1_original$pop_label == "Iberian,Spanish")
+CEPH <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "CEPH")
+FRE <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "French")
+SAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Sardinian")
+AFR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "African Ancestry SW")
+CAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "African Caribbean")
+TUSC <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Tuscan" | d_tsne_1_original$pop_label == "Toscani")
+BERG <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Bergamo" | d_tsne_1_original$pop_label == "Bergamo Italian")
+MOZ <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mozabite")
+p5 <- p + geom_point(data=PUR, 
+             aes_string(x="V1", y="V2"),
+             color='yellow', 
+             size=0.05) + geom_point(data=PEL, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05, shape=21) + geom_point(data=MXL, 
+             aes_string(x="V1", y="V2"),
+             color='darkviolet', 
+             size=0.05, shape=10) + geom_point(data=MAY, 
+             aes_string(x="V1", y="V2"),
+             color='chartreuse', 
+             size=0.05, shape=10) + geom_point(data=CLM, 
+             aes_string(x="V1", y="V2"),
+             color='mediumblue', 
+             size=0.05, shape=10) + geom_point(data=IBE, 
+             aes_string(x="V1", y="V2"),
+             color='red', 
+             size=0.05, shape=10) + geom_point(data=BSQ, 
+             aes_string(x="V1", y="V2"),
+             color='red4', 
+             size=0.05, shape=10) + geom_point(data=CEPH, 
+             aes_string(x="V1", y="V2"),
+             color='springgreen1', 
+             size=0.05, shape=10) + geom_point(data=FRE, 
+             aes_string(x="V1", y="V2"),
+             color='darkorange1', 
+             size=0.05, shape=10) + geom_point(data=SAR, 
+             aes_string(x="V1", y="V2"),
+             color='turquoise1', 
+             size=0.05, shape=10) + geom_point(data=AFR, 
+             aes_string(x="V1", y="V2"),
+             color='slateblue1', 
+             size=0.05, shape=10) + geom_point(data=CAR, 
+             aes_string(x="V1", y="V2"),
+             color='violetred1', 
+             size=0.05, shape=10) + geom_point(data=TUSC, 
+             aes_string(x="V1", y="V2"),
+             color='hotpink', 
+             size=0.05, shape=10) + geom_point(data=BERG, 
+             aes_string(x="V1", y="V2"),
+             color='deeppink4', 
+             size=0.05, shape=10) + geom_point(data=KAR, 
+             aes_string(x="V1", y="V2"),
+             color='firebrick1', 
+             size=0.05, shape=10) + geom_point(data=GBR, 
+             aes_string(x="V1", y="V2"),
+             color='bisque4', 
+             size=0.05, shape=10) + geom_point(data=MOZ, 
+             aes_string(x="V1", y="V2"),
+             color='lightpink', 
+             size=0.05, shape=10)
+p5
+ggsave("1000GPonly_K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PCAfalse_highlightLatino.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+gg <- ggplotly(p5, dynamicTicks = "y")
+style(gg, hoveron = "points", hoverinfo = "x+y+text", hoverlabel = list(bgcolor = "white"))
+htmlwidgets::saveWidget(as_widget(gg), "1000GPonly_K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PR_PCAfalse_highlightLatino.html")
+```
+
+
+Omni
+```{r}
+rm(list=ls()) 
+
+#PCAs <- read.csv("plink.eigenvec", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+PCAs3 <- read.csv("omni.mds", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+names(PCAs3)[1] <- "WES_ID"
+PCAs3 <- PCAs3[,c(1,4:103)]
+IDs3 <- read.csv("tsne_samples_ref_info.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+IDs3 <- IDs3[,c(2,3)]
+df3 <- merge(PCAs3, IDs3, by="WES_ID", all = FALSE)
+data_tsne <- df3[,c(1,102,2:101)]
+
+set.seed(9)  
+D=3 #or 3
+P=10
+K=20
+
+tsne_model_1 = Rtsne(as.matrix(data_tsne[3:22]), check_duplicates=FALSE, pca=FALSE, perplexity=P, theta=0.0, dims=D)
+
+data_tsne$pop = as.factor(data_tsne$pop)
+d_tsne_1 = as.data.frame(tsne_model_1$Y)  
+d_tsne_1_original=d_tsne_1
+
+d_tsne_1_original$pop_label = factor(data_tsne$pop)
+
+#switched Biaka and PR ORIEN
+d_tsne_1_original$pop_label <- factor(d_tsne_1_original$pop_label, levels = c("African Ancestry SW", 	"African Caribbean", 	"Bantu Herero", 	"Bantu Kenya", 	"Bantu South Africa", 	"Bantu Tswana", 	"Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju|'hoan North", 	"Ju|'hoan North,San", 	"San", "Luhya", 	"Mandenka", 	"Mbuti", 	"Mbuti,Mbuti", 	"Mende", 	"Mozabite", 	"Mozabite,Mozabite", 	"Yoruba", 	"Colombian", 	"Karitiana", 	"Maya", 	"Mayan,Maya", 	"Mexican Ancestry", 	"Peruvian", 	"Piapoco", 	"Pima", 	"Puerto Rican", "Surui", 	"Mongola", 	"Yakut", 	"Balochi", 	"Bengali", 	"Bengali,Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan", 	"Pathan,Pathan", 	"Punjabi", 	"Punjabi,Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", 	"Cambodian,Cambodian", 	"Dai", 	"Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese", 	"Japanese,Japanese", 	"Kinh Vietnamese", 	"Kinh,Kinh Vietnamese", 	"Lahu",	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", 	"Bedouin", 	"Bedouin B", 	"Bergamo", 	"Bergamo Italian", "British", 	"British,English", 	"CEPH", 	"Druze", 	"Finnish", 	"Finnish,Finnish", 	"French", 	"Iberian", 	"Iberian,Spanish", 	"Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", 	"Papuan", 	"Papuan Sepik", 	"Papuan,Papuan Highlands", 	"Papuan,Papuan Sepik"), ordered = TRUE)
+#d_tsne_1_original$Superpop_label = factor(data_tsne$Superpop)
+#d_tsne_1_original$pop_label <- fct_reorder2(d_tsne_1_original, d_tsne_1_original$pop_label, d_tsne_1_original$Superpop_label)
+#d_tsne_1_original$pop_label <- reorder(d_tsne_1_original$Superpop_label, d_tsne_1_original$pop_label, FUN = length)
+
+n <- 99
+palette <- distinctColorPalette(n, runTsne = TRUE)
+
+#d_tsne_1_original %>%
+#  mutate(pop_label = fct_reorder2(pop_label, Superpop_label))
+
+p <- ggplot(d_tsne_1_original, aes_string(x="V1", y="V2", color="pop_label")) +
+  geom_point(size=0.05) +
+  guides(shape = guide_legend(override.aes = list(size = 1)),
+               color = guide_legend(override.aes = list(size = 1)), fill=guide_legend(ncol=10)) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=2) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "horizontal", 
+        legend.text=element_text(size=5),
+        legend.position = "bottom", #can make right, none, etc.
+       legend.box = "vertical", legend.key.size = unit(0.5, "lines"), legend.key.width= unit(1, 'cm')) + 
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#  scale_fill_viridis(discrete = TRUE)
+  scale_color_discrete(name="")
+scale_fill_manual(values=distinctColorPalette(length(unique(d_tsne_1_original$pop_label)))) 
+#scale_colour_gradientn(colours=rainbow(4))
+
+p <- p + ggtitle("TSNE of Plink PCA/MDS of Genotypes for K=20; D=3, Seed=9, perplexity=10, PCA=FALSE") + theme(plot.title = element_text(size=10, face="bold.italic")) + theme(plot.title = element_text(hjust = 0.5))
+p
+ggsave("omni_K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PR_PCAfalse.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+gg <- ggplotly(p, dynamicTicks = "y")
+style(gg, hoveron = "points", hoverinfo = "x+y+text", hoverlabel = list(bgcolor = "white"))
+htmlwidgets::saveWidget(as_widget(gg), "omni_K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PR_PCAfalse.html")
+
+PUR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican")
+#p2 <- p + geom_point(data=PUR, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05) 
+#p2
+
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PUR.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+#PUR2 <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Puerto Rican (ORIEN)")
+#p3 <- p + geom_point(data=PUR2, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p3
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PUR-ORIEN.jpeg", #width=10, height=10, units="in", res=1000, device = jpeg)
+
+MXL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mexican Ancestry")
+#p3 <- p + geom_point(data=MXL, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p3
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_MXL.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+PEL <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Peruvian")
+#p4 <- p + geom_point(data=PEL, 
+#             aes_string(x="V1", y="V2"),
+#             color='black', 
+#             size=0.05)
+#p4
+#ggsave("K20_seed9_D3_perplexity60_plinkPCA_TSNE_26Apr2022_PCAfalse_PEL.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+MAY <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Maya" | d_tsne_1_original$pop_label == "Mayan,Maya")
+CLM <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Colombian")
+KAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Karitiana")
+GBR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "British" | d_tsne_1_original$pop_label == "British,English")
+BSQ <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Basque")
+IBE <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Iberian" | d_tsne_1_original$pop_label == "Iberian,Spanish")
+CEPH <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "CEPH")
+FRE <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "French")
+SAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Sardinian")
+AFR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "African Ancestry SW")
+CAR <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "African Caribbean")
+TUSC <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Tuscan" | d_tsne_1_original$pop_label == "Toscani")
+BERG <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Bergamo" | d_tsne_1_original$pop_label == "Bergamo Italian")
+MOZ <- subset(d_tsne_1_original,d_tsne_1_original$pop_label == "Mozabite")
+p5 <- p + geom_point(data=PUR, 
+             aes_string(x="V1", y="V2"),
+             color='yellow', 
+             size=0.05) + geom_point(data=PEL, 
+             aes_string(x="V1", y="V2"),
+             color='black', 
+             size=0.05, shape=21) + geom_point(data=MXL, 
+             aes_string(x="V1", y="V2"),
+             color='darkviolet', 
+             size=0.05, shape=10) + geom_point(data=MAY, 
+             aes_string(x="V1", y="V2"),
+             color='chartreuse', 
+             size=0.05, shape=10) + geom_point(data=CLM, 
+             aes_string(x="V1", y="V2"),
+             color='mediumblue', 
+             size=0.05, shape=10) + geom_point(data=IBE, 
+             aes_string(x="V1", y="V2"),
+             color='red', 
+             size=0.05, shape=10) + geom_point(data=BSQ, 
+             aes_string(x="V1", y="V2"),
+             color='red4', 
+             size=0.05, shape=10) + geom_point(data=CEPH, 
+             aes_string(x="V1", y="V2"),
+             color='springgreen1', 
+             size=0.05, shape=10) + geom_point(data=FRE, 
+             aes_string(x="V1", y="V2"),
+             color='darkorange1', 
+             size=0.05, shape=10) + geom_point(data=SAR, 
+             aes_string(x="V1", y="V2"),
+             color='turquoise1', 
+             size=0.05, shape=10) + geom_point(data=AFR, 
+             aes_string(x="V1", y="V2"),
+             color='slateblue1', 
+             size=0.05, shape=10) + geom_point(data=CAR, 
+             aes_string(x="V1", y="V2"),
+             color='violetred1', 
+             size=0.05, shape=10) + geom_point(data=TUSC, 
+             aes_string(x="V1", y="V2"),
+             color='hotpink', 
+             size=0.05, shape=10) + geom_point(data=BERG, 
+             aes_string(x="V1", y="V2"),
+             color='deeppink4', 
+             size=0.05, shape=10) + geom_point(data=KAR, 
+             aes_string(x="V1", y="V2"),
+             color='firebrick1', 
+             size=0.05, shape=10) + geom_point(data=GBR, 
+             aes_string(x="V1", y="V2"),
+             color='bisque4', 
+             size=0.05, shape=10) + geom_point(data=MOZ, 
+             aes_string(x="V1", y="V2"),
+             color='lightpink', 
+             size=0.05, shape=10)
+p5
+ggsave("omni_K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PCAfalse_highlightLatino.jpeg", width=10, height=10, units="in", res=1000, device = jpeg)
+
+gg <- ggplotly(p5, dynamicTicks = "y")
+style(gg, hoveron = "points", hoverinfo = "x+y+text", hoverlabel = list(bgcolor = "white"))
+htmlwidgets::saveWidget(as_widget(gg), "omni_K20_seed9_D3_Perplexity10_plinkPCA-MDS_TSNE_26Apr2022_PCAfalse_highlightLatino.html")
+```
