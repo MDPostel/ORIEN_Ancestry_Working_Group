@@ -1,21 +1,21 @@
 #!/usr/bin/bash
-#SBATCH --partition=largemem
-#SBATCH --mem=500G
-#SBATCH --time=07-00:00:00
+#SBATCH --partition=epyc-64
+#SBATCH --mem=60G
+#SBATCH --cpus-per-task=60
+#SBATCH --time=2-00:00:00
 #SBATCH --mail-user=mpostel@usc.edu
 #SBATCH --mail-type=FAIL
 #SBATCH --output=slurm-%j.out
-#SBATCH --job-name=AIMs
+#SBATCH --job-name=AIMs_80%geno+VQSR
 
 cd /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/AIMs
 ulimit -n 4001
+vcftools=$(echo "/home1/mpostel/bin/vcftools/src/cpp/vcftools")
 plink=$(echo "/home1/mpostel/bin/plink-1.90/plink")
-t=$(echo 4000) #threads
-mem=$(echo 499) #memory
+t=$(echo 60) #threads
+mem=$(echo 60) #memory
 
 module load usc; module load bzip2; module load bcftools; module load htslib; module load vcftools; module load r
-
-#IF YOU GET AN ERROR REGARDING AD DEFINITIONS NOT MATCHING AND THIS IMPEDING MERGE -- CHANGE THE AD DEFINITION (##FORMAT=<ID=AD...) IN THE HEADER FROM: "Number=R" TO "Number=."
 
 HGDP=$(echo "/project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/HGDP_final_Sep2021.vcf.gz")
 
@@ -25,49 +25,46 @@ GP1000=$(echo "/project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/sub
 #************************************************ ONLY THING TO CHANGE FOR DIFFERENT ORIEN SAMPLES: ************************************************ 
 
 date=$(echo Jan2022)
-ORIEN=$(echo "/project/davidwcr_788/ORIEN_Intermember_Project/isec/ORIEN_intermember_${date}.vcf.gz")
-TCGA=$(echo "/project/davidwcr_666/TCGA/WES/TCGA_CombineGVCFs_Oct2021_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_DPgt20_sorted.vcf.gz")
 
+ORIEN=$(echo /project/davidwcr_788/ORIEN_Intermember_Project/isec/ORIEN_intermember_Jan2022_ADfix.vcf.gz)
+
+TCGA=$(echo "/project/davidwcr_666/TCGA/WES/TCGA_CombineGVCFs_Oct2021_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_DPgt20_sorted.vcf.gz")
 
 #***************************************************************************************************************************************************
 #------
 #FILTER FOR PER-COHORT MISSINGNESS <=10%, MAF >=.01 FOR REFERENCES DATASETS, SNPS ONLY
 
-#gunzip $ORIEN
-#sed -i 's/AD,Number=R/AD,Number=./g' /project/davidwcr_788/ORIEN_Intermember_Project/isec/ORIEN_intermember_Jan2022.vcf
-#bgzip /project/davidwcr_788/ORIEN_Intermember_Project/isec/ORIEN_intermember_Jan2022.vcf
-#tabix -f $ORIEN
-
-bcftools view $HGDP -m2 -M2 -v snps | bcftools view -V indels -e 'MAF<0.01' -Oz -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.recode.vcf.gz --threads $t
-tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.recode.vcf.gz
-HGDP2=$(echo "HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.recode.vcf.gz")
+bcftools view $HGDP -m2 -M2 -v snps | bcftools view -V indels -e 'MAF<0.01' -Oz -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz --threads $t
+tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz
+HGDP2=$(echo "HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz")
 
 bcftools view $ORIEN -m2 -M2 -v snps | bcftools view -V indels -Oz -o ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps.vcf.gz --threads $t
 tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps.vcf.gz
 ORIEN2=$(echo "ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps.vcf.gz")
 
-bcftools view $GP1000 -m2 -M2 -v snps | bcftools view -V indels -e 'MAF<0.01' -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.recode.vcf.gz --threads $t
-tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.recode.vcf.gz
-GP1000_2=$(echo "GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.recode.vcf.gz")
+bcftools view $GP1000 -m2 -M2 -v snps | bcftools view -V indels -e 'MAF<0.01' -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz --threads $t
+tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz
+GP1000_2=$(echo "GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1.vcf.gz")
 
 bcftools view $TCGA -m2 -M2 -v snps | bcftools view -V indels -Oz -o TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps.vcf.gz --threads $t
 tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps.vcf.gz
 TCGA2=$(echo "TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps.vcf.gz")
 
-bcftools view -e 'F_MISSING>0.10' -V indels $HGDP2 -Oz -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz
-bcftools view -e 'F_MISSING>0.10' -V indels $ORIEN2 -Oz -o ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz
-bcftools view -e 'F_MISSING>0.10' -V indels $GP1000_2 -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz
-bcftools view -e 'F_MISSING>0.10' -V indels $TCGA2 -Oz -o TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz
 
-tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz
-tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz
-tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz
-tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz
+bcftools view -e 'F_MISSING>0.20' -V indels $HGDP2 -Oz -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz
+bcftools view -e 'F_MISSING>0.20' -V indels $ORIEN2 -Oz -o ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20.vcf.gz
+bcftools view -e 'F_MISSING>0.20' -V indels $GP1000_2 -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz
+bcftools view -e 'F_MISSING>0.20' -V indels $TCGA2 -Oz -o TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20.vcf.gz
 
-HGDP3=$(echo "HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz")
-ORIEN3=$(echo "ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz")
-GP1000_3=$(echo "GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz")
-TCGA3=$(echo "TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz")
+tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz
+tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20.vcf.gz
+tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz
+tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20.vcf.gz
+
+HGDP3=$(echo "HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz")
+ORIEN3=$(echo "ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20.vcf.gz")
+GP1000_3=$(echo "GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz")
+TCGA3=$(echo "TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20.vcf.gz")
 
 #------
 #VQSR
@@ -114,20 +111,16 @@ HGDP_ref2=$(echo $GP1000_ref2)
 #bcftools view -h $ORIEN3 | grep -v "KI" | grep -v "GL" | grep -v "chrUn" | grep -v "random" | grep -v HLA | grep -v alt | grep -v chrEBV | grep -v chrM > ORIEN_header.txt
 #sed -i 's/hs38DH/hs38DH_fix/g' ORIEN_header.txt
 
-#bcftools reheader -h HGDP_header.txt -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_reheader.vcf HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz
-#bcftools reheader -h 1000GP_header.txt -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_reheader.vcf GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz
-#bcftools reheader -h TCGA_header.txt -o TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_reheader.vcf TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz
-#bcftools reheader -h ORIEN_header.txt -o ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_reheader.vcf ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz
 
-#bcftools sort HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz -Oz -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted.vcf.gz -m ${mem}G -T ./; tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted.vcf.gz
-#bcftools sort GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10.vcf.gz -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted.vcf.gz -m ${mem}G -T ./; tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted.vcf.gz
-#bcftools sort ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz -Oz -o ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf.gz -m ${mem}G -T ./; tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf.gz
-#bcftools sort TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10.vcf.gz -Oz -o TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf.gz -m ${mem}G -T ./; tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf.gz
+bcftools sort HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz -Oz -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted.vcf.gz -m ${mem}G -T ./; tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted.vcf.gz
+bcftools sort GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20.vcf.gz -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted.vcf.gz -m ${mem}G -T ./; tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted.vcf.gz
+bcftools sort ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20.vcf.gz -Oz -o ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted.vcf.gz -m ${mem}G -T ./; tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted.vcf.gz
+bcftools sort TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20.vcf.gz -Oz -o TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted.vcf.gz -m ${mem}G -T ./; tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted.vcf.gz
 
-HGDP4a=$(echo HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted.vcf.gz)
-GP1000_4a=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted.vcf.gz)
-ORIEN4=$(echo ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf.gz)
-TCGA4a=$(echo TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf.gz)
+HGDP4a=$(echo HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted.vcf.gz)
+GP1000_4a=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted.vcf.gz)
+ORIEN4=$(echo ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted.vcf.gz)
+TCGA4a=$(echo TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted.vcf.gz)
 
 
 GP1000_phase3=$(echo ALL.wgs.phase3_shapeit2_mvncall_integrated_v5c.20130502.sites.vcf.gz)
@@ -137,12 +130,8 @@ omni=$(echo /project/davidwcr_264/Projects/Mackenzie/resources/1000G_omni2.5.hg3
 hapmap=$(echo /project/davidwcr_264/Projects/Mackenzie/resources/hapmap_3.3.hg38.vcf.gz)
 gatk=$(echo /project/davidwcr_264/Packages/gatk/4.1.8.0/gatk)
 
-#gunzip $ORIEN4
-#sed -i 's/^##fileformat=VCFv4.3/##fileformat=VCFv4.2/' ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf
-#bgzip ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf
-#tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted.vcf.gz
 
-
+echo running VariantRecalibrator
 $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true' \
    -R $ORIEN_ref2 \
    --variant $ORIEN4 \
@@ -150,6 +139,7 @@ $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=tr
    --resource:omni,known=false,training=true,truth=false,prior=12.0 $omni \
    -an QD -an MQ -an MQRankSum -an ReadPosRankSum -an FS -an SOR \
    -mode SNP \
+   -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.5 -tranche 99.0 -tranche 98.5 -tranche 98.0 -tranche 97.5 -tranche 97.0 -tranche 96.5 -tranche 96.0 -tranche 95.5 -tranche 95.0 -tranche 94.5 -tranche 94.0 -tranche 93.5 -tranche 93.0 -tranche 92.5 -tranche 92.0 -tranche 91.5 -tranche 91.0 -tranche 90.5 -tranche 90.0 \
    --output ORIEN.recal \
    --tranches-file ORIEN.tranches \
    --rscript-file ORIEN.plots.R
@@ -157,7 +147,7 @@ $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=tr
 $gatk VariantAnnotator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true' \
    -R $TCGA_ref2 \
    -V $TCGA4a \
-   -O TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted_QD.vcf.gz \
+   -O TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted_QD.vcf.gz \
    -A QualByDepth \
    -A AS_QualByDepth \
    -A RMSMappingQuality \
@@ -166,8 +156,8 @@ $gatk VariantAnnotator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true'
    -A FisherStrand \
    -A StrandOddsRatio
  
-tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted_QD.vcf.gz
-TCGA4=$(echo TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_sorted_QD.vcf.gz)
+tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted_QD.vcf.gz
+TCGA4=$(echo TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_sorted_QD.vcf.gz)
 
 $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true' \
    -R $TCGA_ref2 \
@@ -178,12 +168,13 @@ $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=tr
    -mode SNP \
    --output TCGA.recal \
    --max-gaussians 4 \
+   -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.5 -tranche 99.0 -tranche 98.5 -tranche 98.0 -tranche 97.5 -tranche 97.0 -tranche 96.5 -tranche 96.0 -tranche 95.5 -tranche 95.0 -tranche 94.5 -tranche 94.0 -tranche 93.5 -tranche 93.0 -tranche 92.5 -tranche 92.0 -tranche 91.5 -tranche 91.0 -tranche 90.5 -tranche 90.0 \
    --tranches-file TCGA.tranches \
    --rscript-file TCGA.plots.R
 
 $gatk VariantAnnotator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true' \
    -V $HGDP4a \
-   -O HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted_QD.vcf.gz \
+   -O HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted_QD.vcf.gz \
    -A QualByDepth \
    -A AS_QualByDepth \
    -A RMSMappingQuality \
@@ -192,8 +183,8 @@ $gatk VariantAnnotator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true'
    -A FisherStrand \
    -A StrandOddsRatio
 
-tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted_QD.vcf.gz
-HGDP4=$(echo HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted_QD.vcf.gz)
+tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted_QD.vcf.gz
+HGDP4=$(echo HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted_QD.vcf.gz)
 
 
 $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true' \
@@ -201,15 +192,16 @@ $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=tr
    --variant $HGDP4 \
    --resource:hapmap,known=false,training=true,truth=true,prior=15.0 $hapmap \
    --resource:omni,known=false,training=true,truth=false,prior=12.0 $omni \
-   -an QD -an FS -an SOR \	
+   -an QD -an FS -an SOR \
    -mode SNP \
    --output HGDP.recal \
    --tranches-file HGDP.tranches \
+   -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.5 -tranche 99.0 -tranche 98.5 -tranche 98.0 -tranche 97.5 -tranche 97.0 -tranche 96.5 -tranche 96.0 -tranche 95.5 -tranche 95.0 -tranche 94.5 -tranche 94.0 -tranche 93.5 -tranche 93.0 -tranche 92.5 -tranche 92.0 -tranche 91.5 -tranche 91.0 -tranche 90.5 -tranche 90.0 \
    --rscript-file HGDP.plots.R
 
 $gatk VariantAnnotator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true' \
    -V $GP1000_4a \
-   -O GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted_QD.vcf.gz \
+   -O GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted_QD.vcf.gz \
    -A QualByDepth \
    -A AS_QualByDepth \
    -A RMSMappingQuality \
@@ -217,8 +209,8 @@ $gatk VariantAnnotator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true'
    -A ReadPosRankSumTest \
    -A FisherStrand \
    -A StrandOddsRatio
-tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted_QD.vcf.gz
-GP1000_4=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_sorted_QD.vcf.gz)
+tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted_QD.vcf.gz
+GP1000_4=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_sorted_QD.vcf.gz)
 
 
 $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true' \
@@ -230,63 +222,77 @@ $gatk VariantRecalibrator --java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=tr
    -mode SNP \
    --output 1000GP.recal \
    --tranches-file 1000GP.tranches \
+   -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.5 -tranche 99.0 -tranche 98.5 -tranche 98.0 -tranche 97.5 -tranche 97.0 -tranche 96.5 -tranche 96.0 -tranche 95.5 -tranche 95.0 -tranche 94.5 -tranche 94.0 -tranche 93.5 -tranche 93.0 -tranche 92.5 -tranche 92.0 -tranche 91.5 -tranche 91.0 -tranche 90.5 -tranche 90.0 \
    --rscript-file 1000GP.plots.R
 
+
+echo running ApplyVQSR
 $gatk ApplyVQSR \
    -R $ORIEN_ref2 \
    --variant $ORIEN4 \
-   --output ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf \
-   --truth-sensitivity-filter-level 99.0 \
+   --output ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSR.vcf \
    --tranches-file ORIEN.tranches \
+   --truth-sensitivity-filter-level 90.0 \
    --recal-file ORIEN.recal \
    -mode SNP
 
 $gatk ApplyVQSR \
    -R $TCGA_ref2 \
    --variant $TCGA4 \
-   --output TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf \
-   --truth-sensitivity-filter-level 99.0 \
+   --output TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSR.vcf \
    --tranches-file TCGA.tranches \
+   --truth-sensitivity-filter-level 90.0 \
    --recal-file TCGA.recal \
    -mode SNP
-
 
 $gatk ApplyVQSR \
    -R $HGDP_ref2 \
    --variant $HGDP4 \
-   --output HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf \
-   --truth-sensitivity-filter-level 99.0 \
+   --output HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf \
    --tranches-file HGDP.tranches \
+   --truth-sensitivity-filter-level 90.0 \
    --recal-file HGDP.recal \
    -mode SNP
 
 $gatk ApplyVQSR \
    -R $GP1000_ref2 \
    --variant $GP1000_4 \
-   --output GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf \
-   --truth-sensitivity-filter-level 99.0 \
+   --output GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf \
    --tranches-file 1000GP.tranches \
+   --truth-sensitivity-filter-level 90.0 \
    --recal-file 1000GP.recal \
    -mode SNP
 
-sed -i 's/AD,Number=R/AD,Number=./g' ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf
+echo ensure that AD definitions match in headers
+sed -i 's/AD,Number=R/AD,Number=./g' *missing20_VQSR.vcf
+grep "AD,Number=" *missing20_VQSR.vcf
 
-rm ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz
-bgzip ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf
-bgzip TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf
-bgzip HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf
-bgzip GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf
+bgzip -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSR.vcf --threads $t
+bgzip -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSR.vcf --threads $t
+bgzip -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf --threads $t
+bgzip -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf --threads $t
 
-tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz
-tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz
-tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz
-tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz
+#bcftools index -t ... --threads $t  ---> might be faster...
+tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSR.vcf.gz
+tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSR.vcf.gz
+tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz
+tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz
 
-bcftools view -i '%FILTER=="PASS"' HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz -Oz -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_PASS.vcf.gz
-bcftools view -i '%FILTER=="PASS"' ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz -Oz -o ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR_PASS.vcf.gz
-bcftools view -i '%FILTER=="PASS"' GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR.vcf.gz -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_PASS.vcf.gz
-bcftools view -i '%FILTER=="PASS"' TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR.vcf.gz -Oz -o TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR_PASS.vcf.gz
-tabix -f *PASS.vcf.gz
+
+bcftools view -i '%FILTER=="PASS" || %FILTER=="VQSRTrancheSNP90.00to90.50" || %FILTER=="VQSRTrancheSNP90.50to91.00" || %FILTER=="VQSRTrancheSNP91.00to91.50" || %FILTER=="VQSRTrancheSNP91.50to92.00" || %FILTER=="VQSRTrancheSNP92.00to92.50" || %FILTER=="VQSRTrancheSNP92.50to93.00" || %FILTER=="VQSRTrancheSNP93.00to93.50" || %FILTER=="VQSRTrancheSNP93.50to94.00" || %FILTER=="VQSRTrancheSNP94.00to94.50" || %FILTER=="VQSRTrancheSNP94.50to95.00" || %FILTER=="VQSRTrancheSNP95.00to95.50" || %FILTER=="VQSRTrancheSNP95.50to96.00" || %FILTER=="VQSRTrancheSNP96.00to96.50" || %FILTER=="VQSRTrancheSNP96.50to97.00" || %FILTER=="VQSRTrancheSNP97.00to97.50" || %FILTER=="VQSRTrancheSNP97.50to98.00" || %FILTER=="VQSRTrancheSNP98.00to98.50" || %FILTER=="VQSRTrancheSNP98.50to99.00"' ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSR.vcf.gz -Oz -o ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSRPASS.vcf.gz
+
+bcftools view -i '%FILTER=="PASS" || %FILTER=="VQSRTrancheSNP90.00to90.50" || %FILTER=="VQSRTrancheSNP90.50to91.00" || %FILTER=="VQSRTrancheSNP91.00to91.50" || %FILTER=="VQSRTrancheSNP91.50to92.00" || %FILTER=="VQSRTrancheSNP92.00to92.50" || %FILTER=="VQSRTrancheSNP92.50to93.00" || %FILTER=="VQSRTrancheSNP93.00to93.50" || %FILTER=="VQSRTrancheSNP93.50to94.00" || %FILTER=="VQSRTrancheSNP94.00to94.50" || %FILTER=="VQSRTrancheSNP94.50to95.00" || %FILTER=="VQSRTrancheSNP95.00to95.50" || %FILTER=="VQSRTrancheSNP95.50to96.00" || %FILTER=="VQSRTrancheSNP96.00to96.50" || %FILTER=="VQSRTrancheSNP96.50to97.00" || %FILTER=="VQSRTrancheSNP97.00to97.50" || %FILTER=="VQSRTrancheSNP97.50to98.00" || %FILTER=="VQSRTrancheSNP98.00to98.50" || %FILTER=="VQSRTrancheSNP98.50to99.00"' TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSR.vcf.gz -Oz -o TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSRPASS.vcf.gz
+
+bcftools view -i '%FILTER=="PASS" || %FILTER=="VQSRTrancheSNP90.00to90.50" || %FILTER=="VQSRTrancheSNP90.50to91.00" || %FILTER=="VQSRTrancheSNP91.00to91.50" || %FILTER=="VQSRTrancheSNP91.50to92.00" || %FILTER=="VQSRTrancheSNP92.00to92.50" || %FILTER=="VQSRTrancheSNP92.50to93.00" || %FILTER=="VQSRTrancheSNP93.00to93.50" || %FILTER=="VQSRTrancheSNP93.50to94.00" || %FILTER=="VQSRTrancheSNP94.00to94.50" || %FILTER=="VQSRTrancheSNP94.50to95.00" || %FILTER=="VQSRTrancheSNP95.00to95.50" || %FILTER=="VQSRTrancheSNP95.50to96.00" || %FILTER=="VQSRTrancheSNP96.00to96.50" || %FILTER=="VQSRTrancheSNP96.50to97.00" || %FILTER=="VQSRTrancheSNP97.00to97.50" || %FILTER=="VQSRTrancheSNP97.50to98.00" || %FILTER=="VQSRTrancheSNP98.00to98.50" || %FILTER=="VQSRTrancheSNP98.50to99.00"' HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz -Oz -o HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASS.vcf.gz
+
+bcftools view -i '%FILTER=="PASS" || %FILTER=="VQSRTrancheSNP90.00to90.50" || %FILTER=="VQSRTrancheSNP90.50to91.00" || %FILTER=="VQSRTrancheSNP91.00to91.50" || %FILTER=="VQSRTrancheSNP91.50to92.00" || %FILTER=="VQSRTrancheSNP92.00to92.50" || %FILTER=="VQSRTrancheSNP92.50to93.00" || %FILTER=="VQSRTrancheSNP93.00to93.50" || %FILTER=="VQSRTrancheSNP93.50to94.00" || %FILTER=="VQSRTrancheSNP94.00to94.50" || %FILTER=="VQSRTrancheSNP94.50to95.00" || %FILTER=="VQSRTrancheSNP95.00to95.50" || %FILTER=="VQSRTrancheSNP95.50to96.00" || %FILTER=="VQSRTrancheSNP96.00to96.50" || %FILTER=="VQSRTrancheSNP96.50to97.00" || %FILTER=="VQSRTrancheSNP97.00to97.50" || %FILTER=="VQSRTrancheSNP97.50to98.00" || %FILTER=="VQSRTrancheSNP98.00to98.50" || %FILTER=="VQSRTrancheSNP98.50to99.00"' GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSR.vcf.gz -Oz -o GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASS.vcf.gz
+
+#could try gatk FilterVariantTranches
+
+tabix -f ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSRPASS.vcf.gz
+tabix -f TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSRPASS.vcf.gz
+tabix -f HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASS.vcf.gz
+tabix -f GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASS.vcf.gz
 
 
 echo "CHECK ABOVE FOR ERRORS BEFORE ISEC"
@@ -294,138 +300,170 @@ echo "CHECK ABOVE FOR ERRORS BEFORE ISEC"
 #------
 #ISEC -- INTERSECTION OF 4 DATASETS
 
-HGDP5=$(echo HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_PASS.vcf.gz)
-ORIEN5=$(echo ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR_PASS.vcf.gz)
-GP1000_5=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing10_VQSR_PASS.vcf.gz)
-TCGA5=$(echo TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing10_VQSR_PASS.vcf.gz)
+HGDP5=$(echo HGDP_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASS.vcf.gz)
+ORIEN5=$(echo ORIEN_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSRPASS.vcf.gz)
+GP1000_5=$(echo GP1000_subsetbed_isecdbSNP_DPgt20_sorted_snps_maf1_missing20_VQSRPASS.vcf.gz)
+TCGA5=$(echo TCGA_subsetbed_isecdbSNP_DPgt20_sorted_snps_missing20_VQSRPASS.vcf.gz)
 
+echo running isec
+bcftools isec $HGDP5 $GP1000_5 $ORIEN5 $TCGA5 -n=4 -Oz -o HGDP_1000GP_ORIEN_TCGA_snps_missing20_VQSRPASS_isec.vcf.gz -p /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/AIMs
 
-bcftools isec $HGDP5 $GP1000_5 $ORIEN5 $TCGA5 -n=4 -Oz -o HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz -p /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/AIMs
-tabix -f HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz
+#ISEC DOES NOT END UP NAMING THE OUTPUT CORRECTLY...
+echo ensure that AD definitions match in headers
+zgrep "AD,Number=" 0000.vcf.gz
+zgrep "AD,Number=" 0001.vcf.gz
+zgrep "AD,Number=" 0002.vcf.gz
+zgrep "AD,Number=" 0003.vcf.gz
 
-#AD definitions don't match; reheader
-bcftools view -h 0003.vcf.gz -o newheader
-sed -i 's/AD,Number=R/AD,Number=./g' newheader
-bcftools reheader -h newheader -o 0003_reheader.vcf.gz 0003.vcf.gz
+bcftools view -h 0000.vcf.gz > 0000.vcf.gz_header.txt
+sed -i 's/AD,Number=R/AD,Number=./g' 0000.vcf.gz_header.txt
+bcftools reheader -h 0000.vcf.gz_header.txt -o 0000_reheader.vcf.gz 0000.vcf.gz
+tabix -f 0000_reheader.vcf.gz
+bcftools view -h 0002.vcf.gz > 0002.vcf.gz_header.txt
+sed -i 's/AD,Number=R/AD,Number=./g' 0002.vcf.gz_header.txt
+bcftools reheader -h 0002.vcf.gz_header.txt -o 0002_reheader.vcf.gz 0002.vcf.gz
+tabix -f 0002_reheader.vcf.gz
+bcftools view -h 0003.vcf.gz > 0003.vcf.gz_header.txt
+sed -i 's/AD,Number=R/AD,Number=./g' 0003.vcf.gz_header.txt
+bcftools reheader -h 0003.vcf.gz_header.txt -o 0003_reheader.vcf.gz 0003.vcf.gz
 tabix -f 0003_reheader.vcf.gz
-rm HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz
-bcftools merge 0000.vcf.gz 0001.vcf.gz 0002.vcf.gz 0003_reheader.vcf.gz -Oz -o HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz --threads $t 
-tabix -f HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz
 
+bcftools merge 0000_reheader.vcf.gz 0001.vcf.gz 0002_reheader.vcf.gz 0003_reheader.vcf.gz -Oz -o HGDP_1000GP_ORIEN_TCGA_snps_missing20_VQSRPASS_isec.vcf.gz --threads $t 
+tabix -f HGDP_1000GP_ORIEN_TCGA_snps_missing20_VQSRPASS_isec.vcf.gz
 
-isec=$(echo HGDP_1000GP_ORIEN_TCGA_snps_missing10_isec.vcf.gz)
+isec=$(echo HGDP_1000GP_ORIEN_TCGA_snps_missing20_VQSRPASS_isec.vcf.gz)
 
-#TsTv
+#TiTv
+echo TiTv ORIEN
 bcftools stats $ORIEN5 | grep "TSTV"
+echo TiTv TCGA
 bcftools stats $TCGA5 | grep "TSTV"
+echo HGDP
 bcftools stats $HGDP5 | grep "TSTV"
+echo TiTv 1000GP
 bcftools stats $GP1000_5 | grep "TSTV"
+echo TiTv isec
 bcftools stats $isec | grep "TSTV"
 
 # determine whether there is cryptic relatedness
 ~/bin/plink-1.90/plink --vcf $isec --double-id --make-bed --out isec
 king -b isec.bed --related --degree 2
+#------
 
-#-----------------
-#VCFTOOLS VERSION
-module load bzip2 bcftools htslib vcftools
+bcftools view $isec --force-samples -S HGDP_sample_names.txt --threads $t > HGDP_post_missing20_VQSRPASS.vcf
+bcftools view $isec --force-samples -S ORIEN_sample_names.txt --threads $t > ORIEN_post_missing20_VQSRPASS.vcf
+bcftools view $isec --force-samples -S 1000GP_sample_names.txt --threads $t > 1000GP_post_missing20_VQSRPASS.vcf
+bcftools view $isec --force-samples -S TCGA_sample_names.txt --threads $t > TCGA_post_missing20_VQSRPASS.vcf
 
-rm TCGA.vcf.gz ORIEN.vcf.gz HGDP.vcf.gz GP1000.vcf.gz
-mv 0000.vcf.gz HGDP.vcf.gz
-mv 0001.vcf.gz GP1000.vcf.gz
-mv 0002.vcf.gz ORIEN.vcf.gz
-mv 0003_reheader.vcf.gz TCGA.vcf.gz
-tabix -f TCGA.vcf.gz ORIEN.vcf.gz HGDP.vcf.gz GP1000.vcf.gz
+bgzip -f HGDP_post_missing20_VQSRPASS.vcf; tabix -f HGDP_post_missing20_VQSRPASS.vcf.gz
+bgzip -f ORIEN_post_missing20_VQSRPASS.vcf; tabix -f ORIEN_post_missing20_VQSRPASS.vcf.gz
+bgzip -f 1000GP_post_missing20_VQSRPASS.vcf; tabix -f 1000GP_post_missing20_VQSRPASS.vcf.gz
+bgzip -f TCGA_post_missing20_VQSRPASS.vcf; tabix -f TCGA_post_missing20_VQSRPASS.vcf.gz
 
-bcftools merge HGDP.vcf.gz GP1000.vcf.gz --threads $t -Oz -o HGDP_1000GP.vcf.gz
-tabix -f HGDP_1000GP.vcf.gz
+cat HGDP_sample_names.txt > HGDP_1000GP_samples.txt
+cat 1000GP_sample_names.txt >> HGDP_1000GP_samples.txt
+bcftools view $isec --force-samples -S HGDP_1000GP_samples.txt --threads $t -Oz -o HGDP_1000GP_missing20_VQSRPASS.vcf.gz
+tabix -f HGDP_1000GP_missing20_VQSRPASS.vcf.gz
 
-echo "..."
-echo now making vcfs for continental ancestries
-echo making AFR
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S AFR.txt -Oz -o AFR.vcf.gz --threads $t
-echo making EUR
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S EUR.txt -Oz -o EUR.vcf.gz --threads $t
-echo making AMR
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S AMR.txt -Oz -o AMR.vcf.gz --threads $t
-echo making SAS
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S SAS.txt -Oz -o SAS.vcf.gz --threads $t
-echo making EAS
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S EAS.txt -Oz -o EAS.vcf.gz --threads $t
-echo making OCE
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S OCE.txt -Oz -o OCE.vcf.gz --threads $t
-echo making MDE
-bcftools view HGDP_1000GP.vcf.gz --force-samples -S MDE.txt -Oz -o MDE.vcf.gz --threads $t
-tabix -f AFR.vcf.gz; tabix -f EUR.vcf.gz; tabix -f AMR.vcf.gz; tabix -f SAS.vcf.gz; tabix -f EAS.vcf.gz; tabix -f OCE.vcf.gz; tabix -f MDE.vcf.gz
+#7 samples have to look up on cellosaurus
+#echo HGDP00521 >> EUR.txt; echo HGDP00665 >> EUR.txt; echo HGDP00778 >> EAS.txt; echo HGDP01307 >> EAS.txt; echo HGDP00927 >> AFR.txt; echo HGDP01284 >> AFR.txt; echo HGDP00998 >> AMR.txt
+bcftools view HGDP_1000GP_missing20_VQSRPASS.vcf.gz --force-samples -S AFR.txt -Oz -o AFR_missing20_VQSRPASS.vcf.gz --threads $t
+bcftools view HGDP_1000GP_missing20_VQSRPASS.vcf.gz --force-samples -S EUR.txt -Oz -o EUR_missing20_VQSRPASS.vcf.gz --threads $t
+bcftools view HGDP_1000GP_missing20_VQSRPASS.vcf.gz --force-samples -S AMR.txt -Oz -o AMR_missing20_VQSRPASS.vcf.gz --threads $t
+bcftools view HGDP_1000GP_missing20_VQSRPASS.vcf.gz --force-samples -S SAS.txt -Oz -o SAS_missing20_VQSRPASS.vcf.gz --threads $t
+bcftools view HGDP_1000GP_missing20_VQSRPASS.vcf.gz --force-samples -S EAS.txt -Oz -o EAS_missing20_VQSRPASS.vcf.gz --threads $t
+bcftools view HGDP_1000GP_missing20_VQSRPASS.vcf.gz --force-samples -S OCE.txt -Oz -o OCE_missing20_VQSRPASS.vcf.gz --threads $t
+bcftools view HGDP_1000GP_missing20_VQSRPASS.vcf.gz --force-samples -S MDE.txt -Oz -o MDE_missing20_VQSRPASS.vcf.gz --threads $t
+tabix -f AFR_missing20_VQSRPASS.vcf.gz; tabix -f EUR_missing20_VQSRPASS.vcf.gz; tabix -f AMR_missing20_VQSRPASS.vcf.gz; tabix -f SAS_missing20_VQSRPASS.vcf.gz; tabix -f EAS_missing20_VQSRPASS.vcf.gz; tabix -f OCE_missing20_VQSRPASS.vcf.gz; tabix -f MDE_missing20_VQSRPASS.vcf.gz
 
-sbatch Fst.slurm
-echo "..."
-echo gathering HWE stats
-vcftools --gzvcf $isec --hardy --out pooled
-vcftools --gzvcf HGDP.vcf.gz --hardy --out HGDP
-vcftools --gzvcf ORIEN.vcf.gz --hardy --out ORIEN
-vcftools --gzvcf 1000GP.vcf.gz --hardy --out 1000GP
-vcftools --gzvcf TCGA.vcf.gz --hardy --out TCGA
-vcftools --gzvcf AFR.vcf.gz --hardy --out AFR
-vcftools --gzvcf EUR.vcf.gz --hardy --out EUR
-vcftools --gzvcf AMR.vcf.gz --hardy --out AMR
-vcftools --gzvcf SAS.vcf.gz --hardy --out SAS
-vcftools --gzvcf EAS.vcf.gz --hardy --out EAS
-vcftools --gzvcf OCE.vcf.gz --hardy --out OCE
-vcftools --gzvcf MDE.vcf.gz --hardy --out MDE
-echo "..."
-echo gathering missing site stats
-vcftools --gzvcf $isec --missing-site --out pooled
-vcftools --gzvcf HGDP.vcf.gz --missing-site --out HGDP
-vcftools --gzvcf ORIEN.vcf.gz --missing-site --out ORIEN
-vcftools --gzvcf 1000GP.vcf.gz --missing-site --out 1000GP
-vcftools --gzvcf TCGA.vcf.gz --missing-site --out TCGA
-vcftools --gzvcf AFR.vcf.gz --missing-site --out AFR
-vcftools --gzvcf EUR.vcf.gz --missing-site --out EUR
-vcftools --gzvcf AMR.vcf.gz --missing-site --out AMR
-vcftools --gzvcf SAS.vcf.gz --missing-site --out SAS
-vcftools --gzvcf EAS.vcf.gz --missing-site --out EAS
-vcftools --gzvcf OCE.vcf.gz --missing-site --out OCE
-vcftools --gzvcf MDE.vcf.gz --missing-site --out MDE
-echo "..."
-echo gathering freq stats
-vcftools --gzvcf $isec --freq --out pooled
-vcftools --gzvcf HGDP.vcf.gz --freq --out HGDP
-vcftools --gzvcf ORIEN.vcf.gz --freq --out ORIEN
-vcftools --gzvcf 1000GP.vcf.gz --freq --out 1000GP
-vcftools --gzvcf TCGA.vcf.gz --freq --out TCGA
-vcftools --gzvcf AFR.vcf.gz --freq --out AFR
-vcftools --gzvcf EUR.vcf.gz --freq --out EUR
-vcftools --gzvcf AMR.vcf.gz --freq --out AMR
-vcftools --gzvcf SAS.vcf.gz --freq --out SAS
-vcftools --gzvcf EAS.vcf.gz --freq --out EAS
-vcftools --gzvcf OCE.vcf.gz --freq --out OCE
-vcftools --gzvcf MDE.vcf.gz --freq --out MDE
-echo "..."
-echo gathering depth stats
-vcftools --gzvcf $isec --site-mean-depth --out pooled
-vcftools --gzvcf HGDP.vcf.gz --site-mean-depth --out HGDP
-vcftools --gzvcf ORIEN.vcf.gz --site-mean-depth --out ORIEN
-vcftools --gzvcf 1000GP.vcf.gz --site-mean-depth --out 1000GP
-vcftools --gzvcf TCGA.vcf.gz --site-mean-depth --out TCGA
-vcftools --gzvcf AFR.vcf.gz --site-mean-depth --out AFR
-vcftools --gzvcf EUR.vcf.gz --site-mean-depth --out EUR
-vcftools --gzvcf AMR.vcf.gz --site-mean-depth --out AMR
-vcftools --gzvcf SAS.vcf.gz --site-mean-depth --out SAS
-vcftools --gzvcf EAS.vcf.gz --site-mean-depth --out EAS
-vcftools --gzvcf OCE.vcf.gz --site-mean-depth --out OCE
-vcftools --gzvcf MDE.vcf.gz --site-mean-depth --out MDE
-echo "..."
-#echo gathering LD stats
-#vcftools --gzvcf $isec --hap-r2 --out pooled
-#vcftools--gzvcf HGDP.vcf.gz --hap-r2 --out HGDP
-#vcftools --gzvcf ORIEN.vcf.gz --hap-r2 --out ORIEN
-#vcftools --gzvcf 1000GP.vcf.gz --hap-r2 --out 1000GP
-#vcftools --gzvcf TCGA.vcf.gz --hap-r2 --out TCGA
-#vcftools --gzvcf AFR.vcf.gz --hap-r2 --out AFR
-#vcftools --gzvcf EUR.vcf.gz --hap-r2 --out EUR
-#vcftools --gzvcf AMR.vcf.gz --hap-r2 --out AMR
-#vcftools --gzvcf SAS.vcf.gz --hap-r2 --out SAS
-#vcftools --gzvcf EAS.vcf.gz --hap-r2 --out EAS
-#vcftools --gzvcf OCE.vcf.gz --hap-r2 --out OCE
-#vcftools --gzvcf MDE.vcf.gz --hap-r2 --out MDE
+#Fst
+echo Fst stats
+vcftools --gzvcf HGDP_1000GP_missing20_VQSRPASS.vcf.gz --weir-fst-pop AFR.txt --weir-fst-pop AMR.txt --weir-fst-pop SAS.txt --weir-fst-pop EAS.txt --weir-fst-pop EUR.txt --weir-fst-pop OCE.txt --weir-fst-pop MDE.txt --out overall_fsts_missing20_VQSRPASS
+
+vcftools --gzvcf HGDP_1000GP_missing20_VQSRPASS.vcf.gz --weir-fst-pop AFR.txt --weir-fst-pop AMR.txt --weir-fst-pop SAS.txt --weir-fst-pop EAS.txt --weir-fst-pop EUR.txt --out overall_fsts_5trunks_no_OCE_no_MDE_missing20_VQSRPASS
+
+vcftools --gzvcf $isec --hardy --out pooled_post_missing20_VQSRPASS
+vcftools --gzvcf $HGDP5 --hardy --out HGDP_pre_missing20_VQSRPASS
+vcftools --gzvcf $GP1000_5 --hardy --out 1000GP_pre_missing20_VQSRPASS
+vcftools --gzvcf $TCGA5 --hardy --out TCGA_pre_missing20_VQSRPASS
+vcftools --gzvcf $ORIEN5 --hardy --out ORIEN_pre_missing20_VQSRPASS
+vcftools --gzvcf HGDP_post_missing20_VQSRPASS.vcf.gz --hardy --out HGDP_post_missing20_VQSRPASS
+vcftools --gzvcf ORIEN_post_missing20_VQSRPASS.vcf.gz --hardy --out ORIEN_post_missing20_VQSRPASS
+vcftools --gzvcf 1000GP_post_missing20_VQSRPASS.vcf.gz --hardy --out 1000GP_post_missing20_VQSRPASS
+vcftools --gzvcf TCGA_post_missing20_VQSRPASS.vcf.gz --hardy --out TCGA_post_missing20_VQSRPASS
+vcftools --gzvcf AFR_missing20_VQSRPASS.vcf.gz --hardy --out AFR_post_missing20_VQSRPASS
+vcftools --gzvcf EUR_missing20_VQSRPASS.vcf.gz --hardy --out EUR_post_missing20_VQSRPASS
+vcftools --gzvcf AMR_missing20_VQSRPASS.vcf.gz --hardy --out AMR_post_missing20_VQSRPASS
+vcftools --gzvcf SAS_missing20_VQSRPASS.vcf.gz --hardy --out SAS_post_missing20_VQSRPASS
+vcftools --gzvcf EAS_missing20_VQSRPASS.vcf.gz --hardy --out EAS_post_missing20_VQSRPASS
+vcftools --gzvcf OCE_missing20_VQSRPASS.vcf.gz --hardy --out OCE_post_missing20_VQSRPASS
+vcftools --gzvcf MDE_missing20_VQSRPASS.vcf.gz --hardy --out MDE_post_missing20_VQSRPASS
+
+vcftools --gzvcf $isec --missing-site --out pooled_post_missing20_VQSRPASS
+vcftools --gzvcf $HGDP5 --missing-site --out HGDP_pre_missing20_VQSRPASS
+vcftools --gzvcf $GP1000_5 --missing-site --out 1000GP_pre_missing20_VQSRPASS
+vcftools --gzvcf $TCGA5 --missing-site --out TCGA_pre_missing20_VQSRPASS
+vcftools --gzvcf $ORIEN5 --missing-site --out ORIEN_pre_missing20_VQSRPASS
+vcftools --gzvcf HGDP_post_missing20_VQSRPASS.vcf.gz --missing-site --out HGDP_post_missing20_VQSRPASS
+vcftools --gzvcf ORIEN_post_missing20_VQSRPASS.vcf.gz --missing-site --out ORIEN_post_missing20_VQSRPASS
+vcftools --gzvcf 1000GP_post_missing20_VQSRPASS.vcf.gz --missing-site --out 1000GP_post_missing20_VQSRPASS
+vcftools --gzvcf TCGA_post_missing20_VQSRPASS.vcf.gz --missing-site --out TCGA_post_missing20_VQSRPASS
+vcftools --gzvcf AFR_missing20_VQSRPASS.vcf.gz --missing-site --out AFR_post_missing20_VQSRPASS
+vcftools --gzvcf EUR_missing20_VQSRPASS.vcf.gz --missing-site --out EUR_post_missing20_VQSRPASS
+vcftools --gzvcf AMR_missing20_VQSRPASS.vcf.gz --missing-site --out AMR_post_missing20_VQSRPASS
+vcftools --gzvcf SAS_missing20_VQSRPASS.vcf.gz --missing-site --out SAS_post_missing20_VQSRPASS
+vcftools --gzvcf EAS_missing20_VQSRPASS.vcf.gz --missing-site --out EAS_post_missing20_VQSRPASS
+vcftools --gzvcf OCE_missing20_VQSRPASS.vcf.gz --missing-site --out OCE_post_missing20_VQSRPASS
+vcftools --gzvcf MDE_missing20_VQSRPASS.vcf.gz --missing-site --out MDE_post_missing20_VQSRPASS
+
+
+vcftools --gzvcf $isec --freq --out pooled_post_missing20_VQSRPASS
+vcftools --gzvcf $HGDP5 --freq --out HGDP_pre_missing20_VQSRPASS
+vcftools --gzvcf $GP1000_5 --freq --out 1000GP_pre_missing20_VQSRPASS
+vcftools --gzvcf $TCGA5 --freq --out TCGA_pre_missing20_VQSRPASS
+vcftools --gzvcf $ORIEN5 --freq --out ORIEN_pre_missing20_VQSRPASS
+vcftools --gzvcf HGDP_post_missing20_VQSRPASS.vcf.gz --freq --out HGDP_post_missing20_VQSRPASS
+vcftools --gzvcf ORIEN_post_missing20_VQSRPASS.vcf.gz --freq --out ORIEN_post_missing20_VQSRPASS
+vcftools --gzvcf 1000GP_post_missing20_VQSRPASS.vcf.gz --freq --out 1000GP_post_missing20_VQSRPASS
+vcftools --gzvcf TCGA_post_missing20_VQSRPASS.vcf.gz --freq --out TCGA_post_missing20_VQSRPASS
+vcftools --gzvcf AFR_missing20_VQSRPASS.vcf.gz --freq --out AFR_post_missing20_VQSRPASS
+vcftools --gzvcf EUR_missing20_VQSRPASS.vcf.gz --freq --out EUR_post_missing20_VQSRPASS
+vcftools --gzvcf AMR_missing20_VQSRPASS.vcf.gz --freq --out AMR_post_missing20_VQSRPASS
+vcftools --gzvcf SAS_missing20_VQSRPASS.vcf.gz --freq --out SAS_post_missing20_VQSRPASS
+vcftools --gzvcf EAS_missing20_VQSRPASS.vcf.gz --freq --out EAS_post_missing20_VQSRPASS
+vcftools --gzvcf OCE_missing20_VQSRPASS.vcf.gz --freq --out OCE_post_missing20_VQSRPASS
+vcftools --gzvcf MDE_missing20_VQSRPASS.vcf.gz --freq --out MDE_post_missing20_VQSRPASS
+
+vcftools --gzvcf $isec --depth --out pooled_post_missing20_VQSRPASS
+vcftools --gzvcf $HGDP5 --depth --out HGDP_pre_missing20_VQSRPASS
+vcftools --gzvcf $GP1000_5 --depth --out 1000GP_pre_missing20_VQSRPASS
+vcftools --gzvcf $TCGA5 --depth --out TCGA_pre_missing20_VQSRPASS
+vcftools --gzvcf $ORIEN5 --depth --out ORIEN_pre_missing20_VQSRPASS
+vcftools --gzvcf HGDP_post_missing20_VQSRPASS.vcf.gz --depth --out HGDP_post_missing20_VQSRPASS
+vcftools --gzvcf ORIEN_post_missing20_VQSRPASS.vcf.gz --depth --out ORIEN_post_missing20_VQSRPASS
+vcftools --gzvcf 1000GP_post_missing20_VQSRPASS.vcf.gz --depth --out 1000GP_post_missing20_VQSRPASS
+vcftools --gzvcf TCGA_post_missing20_VQSRPASS.vcf.gz --depth --out TCGA_post_missing20_VQSRPASS
+vcftools --gzvcf AFR_missing20_VQSRPASS.vcf.gz --depth --out AFR_post_missing20_VQSRPASS
+vcftools --gzvcf EUR_missing20_VQSRPASS.vcf.gz --depth --out EUR_post_missing20_VQSRPASS
+vcftools --gzvcf AMR_missing20_VQSRPASS.vcf.gz --depth --out AMR_post_missing20_VQSRPASS
+vcftools --gzvcf SAS_missing20_VQSRPASS.vcf.gz --depth --out SAS_post_missing20_VQSRPASS
+vcftools --gzvcf EAS_missing20_VQSRPASS.vcf.gz --depth --out EAS_post_missing20_VQSRPASS
+vcftools --gzvcf OCE_missing20_VQSRPASS.vcf.gz --depth --out OCE_post_missing20_VQSRPASS
+vcftools --gzvcf MDE_missing20_VQSRPASS.vcf.gz --depth --out MDE_post_missing20_VQSRPASS
+
+vcftools --gzvcf $isec --hap-r2 --out pooled_post_missing20_VQSRPASS
+vcftools --gzvcf $HGDP5 --hap-r2 --out HGDP_pre_missing20_VQSRPASS
+vcftools --gzvcf $GP1000_5 --hap-r2 --out 1000GP_pre_missing20_VQSRPASS
+vcftools --gzvcf $TCGA5 --hap-r2 --out TCGA_pre_missing20_VQSRPASS
+vcftools --gzvcf $ORIEN5 --hap-r2 --out ORIEN_pre_missing20_VQSRPASS
+vcftools --gzvcf HGDP_post_missing20_VQSRPASS.vcf.gz --hap-r2 --out HGDP_post_missing20_VQSRPASS
+vcftools --gzvcf ORIEN_post_missing20_VQSRPASS.vcf.gz --hap-r2 --out ORIEN_post_missing20_VQSRPASS
+vcftools --gzvcf 1000GP_post_missing20_VQSRPASS.vcf.gz --hap-r2 --out 1000GP_post_missing20_VQSRPASS
+vcftools --gzvcf TCGA_post_missing20_VQSRPASS.vcf.gz --hap-r2 --out TCGA_post_missing20_VQSRPASS
+vcftools --gzvcf AFR_missing20_VQSRPASS.vcf.gz --hap-r2 --out AFR_post_missing20_VQSRPASS
+vcftools --gzvcf EUR_missing20_VQSRPASS.vcf.gz --hap-r2 --out EUR_post_missing20_VQSRPASS
+vcftools --gzvcf AMR_missing20_VQSRPASS.vcf.gz --hap-r2 --out AMR_post_missing20_VQSRPASS
+vcftools --gzvcf SAS_missing20_VQSRPASS.vcf.gz --hap-r2 --out SAS_post_missing20_VQSRPASS
+vcftools --gzvcf EAS_missing20_VQSRPASS.vcf.gz --hap-r2 --out EAS_post_missing20_VQSRPASS
+vcftools --gzvcf OCE_missing20_VQSRPASS.vcf.gz --hap-r2 --out OCE_post_missing20_VQSRPASS
+vcftools --gzvcf MDE_missing20_VQSRPASS.vcf.gz --hap-r2 --out MDE_post_missing20_VQSRPASS

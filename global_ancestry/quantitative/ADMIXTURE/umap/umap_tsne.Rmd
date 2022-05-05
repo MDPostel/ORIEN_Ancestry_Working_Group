@@ -1,0 +1,1495 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+ 
+Set up
+```{r}
+library(plotly)
+#library(dbplyr)
+library(plyr)
+library(stringi)
+library(Rtsne)
+library(gridExtra)  
+library(ggplot2)
+library(reshape2)
+library(data.table)
+library(tidyverse)
+library(randomcoloR)
+
+tsne <- read.table("umap_output_20220225.tsv", sep = "\t", header = TRUE)
+
+refs <- read.csv("HGDP_1000GP.csv")
+refs <- refs[,c(2:24)]
+names(refs)[1] <- "Sample"
+dfa <- merge(refs, tsne, by="Sample", all = TRUE)
+dfb <- dfa[,c(1:3,24,25)]
+ORIEN_TCGA <- subset(dfb, is.na(dfb$pop))
+ORIEN_TCGA$pop <- paste("ORIEN+TCGA")
+df <- merge(refs, tsne, by="Sample", all = FALSE)
+df < na.omit(df)
+```
+```{r}
+African_Ancestry_SW <- subset(df, df$pop == "African Ancestry SW")
+African_Caribbean <- subset(df, df$pop == "African Caribbean")
+Bantu_Herero <- subset(df, df$pop == "Bantu Herero")
+Bantu_Kenya <- subset(df, df$pop == "Bantu Kenya")
+Bantu_South_Africa <- subset(df, df$pop == "Bantu South Africa")
+Bantu_Tswana <- subset(df, df$pop == "Bantu Tswana")
+
+Bantu <- rbind(Bantu_Kenya,Bantu_South_Africa,Bantu_Tswana)
+
+Biaka <- subset(df, df$pop == "Biaka")
+Esan <- subset(df, df$pop == "Esan")
+Gambian_Mandinka <- subset(df, df$pop == "Gambian Mandinka")
+`Ju|'hoan_North` <- subset(df, df$pop == "Ju|'hoan North")
+`Ju|'hoan_North,San` <- subset(df, df$pop == "Ju|'hoan North,San") 
+San <- subset(df, df$pop == "San")
+
+`Ju|'hoan_North, San` <-rbind(`Ju|'hoan_North`, `Ju|'hoan_North,San`, San)
+
+Luhya<- subset(df, df$pop == "Luhya")
+Mandenka <- subset(df, df$pop == "Mandenka") 
+Mbuti1 <- subset(df, df$pop == "Mbuti")
+`Mbuti,Mbuti` <- subset(df, df$pop == "Mbuti,Mbuti") 
+
+Mbuti <- rbind(Mbuti1, `Mbuti,Mbuti`)
+
+Mende <- subset(df, df$pop == "Mende")
+Mozabite1 <- subset(df, df$pop == "Mozabite")
+`Mozabite,Mozabite` <- subset(df, df$pop == "Mozabite,Mozabite")
+
+Mozabite <- rbind(Mozabite1, `Mozabite,Mozabite`)
+
+Yoruba <- subset(df, df$pop == "Yoruba")
+Colombian <- subset(df, df$pop == "Colombian")
+Karitiana <- subset(df, df$pop == "Karitiana")
+Maya1 <- subset(df, df$pop == "Maya")
+`Mayan,Maya` <- subset(df, df$pop == "Maya,Maya")
+
+Maya <- rbind(Maya1,`Mayan,Maya`)
+
+Mexican_Ancestry <- subset(df, df$pop == "Mexican Ancestry")
+Peruvian <- subset(df, df$pop == "Peruvian")
+Piapoco <- subset(df, df$pop == "Piapoco")
+Pima <- subset(df, df$pop == "Pima")
+Puerto_Rican <- subset(df, df$pop == "Puerto Rican")
+Surui <- subset(df, df$pop == "Surui")
+Mongola <- subset(df, df$pop == "Mongola")
+Yakut <- subset(df, df$pop == "Yakut")
+Balochi <- subset(df, df$pop == "Balochi")
+Bengali1 <- subset(df, df$pop == "Bengali")
+`Bengali,Bengali` <- subset(df, df$pop == "Bengali,Bengali")
+
+Bengali <- rbind(Bengali1, `Bengali,Bengali` )
+
+Brahui <- subset(df, df$pop == "Brahui")
+Burusho <- subset(df, df$pop == "Burusho")
+Gujarati <- subset(df, df$pop == "Gujarati")
+Hazara <- subset(df, df$pop == "Hazara")
+Kalash <- subset(df, df$pop == "Kalash")
+Makrani <- subset(df, df$pop == "Makrani")
+Pathan1 <- subset(df, df$pop == "Pathan")
+`Pathan,Pathan` <- subset(df, df$pop == "Pathan,Pathan")
+
+Pathan <- rbind(Pathan1, `Pathan,Pathan`)
+
+Punjabi1 <- subset(df, df$pop == "Punjabi")
+`Punjabi,Punjabi` <- subset(df, df$pop == "Punjabi,Punjabi")
+
+Punjabi <- rbind(Punjabi1, `Punjabi,Punjabi`)
+
+Sindhi <- subset(df, df$pop == "Sindhi")
+Tamil <- subset(df, df$pop == "Tamil")
+Telugu <- subset(df, df$pop == "Telugu")
+Uygur <- subset(df, df$pop == "Uygur")
+Cambodian1 <- subset(df, df$pop == "Cambodian")
+`Cambodian,Cambodian` <- subset(df, df$pop == "Cambodian,Cambodian")
+
+Cambodian <- rbind(Cambodian1,`Cambodian,Cambodian` )
+
+Dai <- subset(df, df$pop == "Dai")
+Dai_Chinese1 <- subset(df, df$pop == "Dai_Chinese")
+
+Dai_Chinese <- rbind(Dai, Dai_Chinese1)
+
+Daur <- subset(df, df$pop == "Daur")
+Han <- subset(df, df$pop == "Han")
+Northern_Han <- subset(df, df$pop == "Northern_Han")
+Southern_Han_Chinese <- subset(df, df$pop == "Southern Han Chinese")
+Han_Chinese1 <- subset(df, df$pop == "Han Chinese")
+
+Han_Chinese <- rbind(Han, Han_Chinese1, Southern_Han_Chinese, Northern_Han)
+
+Hezhen <- subset(df, df$pop == "Hezhen")
+Japanese1 <- subset(df, df$pop == "Japanese")
+`Japanese,Japanese` <- subset(df, df$pop == "Japanese,Japanese")
+
+Japanese <- rbind(Japanese1, `Japanese,Japanese`)
+
+Kinh_Vietnamese1 <- subset(df, df$pop == "Kinh Vietnamese")
+`Kinh,Kinh_Vietnamese` <- subset(df, df$pop == "Kinh,Kinh_Vietnamese")
+
+Kinh_Vietnamese <- rbind(Kinh_Vietnamese1, `Kinh,Kinh_Vietnamese`)
+
+Lahu <- subset(df, df$pop == "Lahu")
+Miao <- subset(df, df$pop == "Miao")
+Mongolian <- subset(df, df$pop == "Mongolian")
+Naxi <- subset(df, df$pop == "Naxi")
+
+Oroqen <- subset(df, df$pop == "Oroqen")
+She <- subset(df, df$pop == "She")
+Tu <- subset(df, df$pop == "Tu")
+Tujia <- subset(df, df$pop == "Tujia")
+Xibo <- subset(df, df$pop == "Xibo")
+Yi <- subset(df, df$pop == "Yi")
+Adygei <- subset(df, df$pop == "Adygei")
+Basque <- subset(df, df$pop == "Basque")
+Bedouin1 <- subset(df, df$pop == "Bedouin")
+Bedouin_B <- subset(df, df$pop == "Bedouin B")
+
+Bedouin <- rbind(Bedouin1, Bedouin_B)
+
+Bergamo <- subset(df, df$pop == "Bergamo")
+Bergamo_Italian1 <- subset(df, df$pop == "Bergamo Italian")
+
+Bergamo_Italian <- rbind(Bergamo,Bergamo_Italian1)
+
+British1 <- subset(df, df$pop == "British")
+`British,English` <- subset(df, df$pop == "British,English")
+
+British <- rbind(British1, `British,English`)
+
+CEPH <- subset(df, df$pop == "CEPH")
+Druze <- subset(df, df$pop == "Druze")
+Finnish1 <- subset(df, df$pop == "Finnish")
+`Finnish,Finnish` <- subset(df, df$pop == "Finnish,Finnish")
+
+Finnish <- rbind(Finnish1, `Finnish,Finnish`)
+
+French <- subset(df, df$pop == "French")
+Iberian1 <- subset(df, df$pop == "Iberian")
+`Iberian,Spanish` <- subset(df, df$pop == "Iberian,Spanish")
+
+Iberian <- rbind(Iberian1, `Iberian,Spanish` )
+
+Orcadian <- subset(df, df$pop == "Orcadian")
+Palestinian <- subset(df, df$pop == "Palestinian")
+Russian <- subset(df, df$pop == "Russian")
+Sardinian <- subset(df, df$pop == "Sardinian")
+Toscani <- subset(df, df$pop == "Toscani")
+Tuscan1 <- subset(df, df$pop == "Tuscan")
+
+Tuscan <- rbind(Toscani,Tuscan1)
+
+Bougainville <- subset(df, df$pop == "Bougainville")
+Papuan1 <- subset(df, df$pop == "Papuan")
+Papuan_Sepik <- subset(df, df$pop == "Papuan Sepik")
+`Papuan,Papuan_Highlands` <- subset(df, df$pop == "Papuan,Papuan Highlands")
+`Papuan,Papuan_Sepik` <- subset(df, df$pop == "Papuan,Papuan Sepik")
+
+Papuan <- rbind(Papuan1, Papuan_Sepik, `Papuan,Papuan_Highlands`, `Papuan,Papuan_Sepik`)
+```
+
+GGPlot
+```{r}
+n <- 72
+palette <- distinctColorPalette(n)
+
+df <- df[order(df$Superpop),]
+df$pop <- factor(df$pop, levels = c("African Ancestry SW", 	"African Caribbean", 	"Bantu Herero", 	"Bantu Kenya", 	"Bantu South Africa", 	"Bantu Tswana", 	"Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju|'hoan North", 	"Ju|'hoan North,San", 	"Luhya", 	"Mandenka", 	"Mbuti", 	"Mbuti,Mbuti", 	"Mende", 	"Mozabite", 	"San", 	"Yoruba", 	"Mozabite,Mozabite", 	"Colombian", 	"Karitiana", 	"Maya", 	"Mayan,Maya", 	"Mexican Ancestry", 	"Peruvian", 	"Piapoco", 	"Pima", 	"Puerto Rican", 	"Surui", 	"Mongola", 	"Yakut", 	"Balochi", 	"Bengali", 	"Bengali,Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan", 	"Pathan,Pathan", 	"Punjabi", 	"Punjabi,Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", 	"Cambodian,Cambodian", 	"Dai", 	"Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese", 	"Japanese,Japanese", 	"Kinh Vietnamese", 	"Kinh,Kinh Vietnamese", 	"Lahu", 	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", 	"Bedouin", 	"Bedouin B", 	"Bergamo", 	"Bergamo Italian", 	"British", 	"British,English", 	"CEPH", 	"Druze", 	"Finnish", 	"Finnish,Finnish", 	"French", 	"Iberian", 	"Iberian,Spanish", 	"Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", 	"Papuan", 	"Papuan Sepik", 	"Papuan,Papuan Highlands", 	"Papuan,Papuan Sepik"), ordered = TRUE)
+
+p <- ggplot(df, aes_string(x="X1", y="X2", color="pop")) +
+  geom_point(size=0.05) +
+  geom_point(data=ORIEN_TCGA, color="black", fill="white", alpha = 1/500, size=0.1, shape = 5, stroke = 2) +
+  guides(shape = guide_legend(override.aes = list(size = 1)),
+               color = guide_legend(override.aes = list(size = 1)), fill=guide_legend(ncol=10)) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=2) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "horizontal", 
+        legend.text=element_text(size=4),
+        legend.position = "bottom", #can make right, none, etc.
+       legend.box = "horizontal", legend.key.size = unit(0.05, "lines"), legend.key.width= unit(1.4, 'cm')) + 
+  scale_color_discrete(name="")
+scale_fill_manual(values=distinctColorPalette(length(unique(df$pop)))) 
+
+jpeg(file = "umap_clustering.jpeg", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+Plotly (don't recommend this one)
+```{r}
+plot <- plot_ly(data = df, type = 'scatter', mode = "markers")
+
+African_Ancestry_SW_X1<- African_Ancestry_SW$X1
+African_Ancestry_SW_X2<- African_Ancestry_SW$X2
+
+plot <- plot %>%
+  add_markers(
+    x = African_Ancestry_SW_X1, 
+    y = African_Ancestry_SW_X2, 
+    marker = list(
+      color = print("darkred"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("African Ancestry SW"))
+
+
+African_Caribbean_X1<- African_Caribbean$X1
+African_Caribbean_X2<- African_Caribbean$X2
+
+plot <- plot %>%
+  add_markers(
+    x = African_Caribbean_X1, 
+    y = African_Caribbean_X2, 
+    marker = list(
+      color = print("firebrick4"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("African Caribbean"))
+
+
+Bantu_X1<- Bantu$X1
+Bantu_X2<- Bantu$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Bantu_X1, 
+    y = Bantu_X2, 
+    marker = list(
+      color = print("firebrick"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Bantu"))
+
+
+Biaka_X1<- Biaka$X1
+Biaka_X2<- Biaka$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Biaka_X1, 
+    y = Biaka_X2, 
+    marker = list(
+      color = print("firebrick1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Biaka"))
+
+
+
+Esan_X1<- Esan$X1
+Esan_X2<- Esan$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Esan_X1, 
+    y = Esan_X2, 
+    marker = list(
+      color = print("red2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Esan"))
+
+
+Gambian_Mandinka_X1<- Gambian_Mandinka$X1
+Gambian_Mandinka_X2<- Gambian_Mandinka$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Gambian_Mandinka_X1, 
+    y = Gambian_Mandinka_X2, 
+    marker = list(
+      color = print("red"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Gambian Mandinka"))
+
+
+Ju_hoan_North_San_X1<- `Ju|'hoan_North, San`$X1
+Ju_hoan_North_San_X2 <- `Ju|'hoan_North, San`$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Ju_hoan_North_San_X1, 
+    y = Ju_hoan_North_San_X2, 
+    marker = list(
+      color = print("orangered3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Ju|'hoan_North, San"))
+
+
+
+Luhya_X1<- Luhya$X1
+Luhya_X2<- Luhya$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Luhya_X1, 
+    y = Luhya_X2, 
+    marker = list(
+      color = print("orangered2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Luhya"))
+
+
+Mandenka_X1<- Mandenka$X1
+Mandenka_X2<- Mandenka$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Mandenka_X1, 
+    y = Mandenka_X2, 
+    marker = list(
+      color = print("orangered1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Mandenka"))
+
+
+
+Mbuti_X1<- Mbuti$X1
+Mbuti_X2<- Mbuti$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Mbuti_X1, 
+    y = Mbuti_X2, 
+    marker = list(
+      color = print("tomato3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Mbuti"))
+
+
+Mende_X1<- Mende$X1
+Mende_X2<- Mende$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Mende_X1, 
+    y = Mende_X2, 
+    marker = list(
+      color = print("tomato2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Mende"))
+
+
+Mozabite_X1<- Mozabite$X1
+Mozabite_X2<- Mozabite$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Mozabite_X1, 
+    y = Mozabite_X2, 
+    marker = list(
+      color = print("tomato1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Mozabite"))
+
+
+Yoruba_X1<- Yoruba$X1
+Yoruba_X2<- Yoruba$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Yoruba_X1, 
+    y = Yoruba_X2, 
+    marker = list(
+      color = print("salmon"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Yoruba"))
+
+
+Colombian_X1<- Colombian$X1
+Colombian_X2<- Colombian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Colombian_X1, 
+    y = Colombian_X2, 
+    marker = list(
+      color = print("darkgreen"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Colombian"))
+
+
+Karitiana_X1<- Karitiana$X1
+Karitiana_X2<- Karitiana$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Karitiana_X1, 
+    y = Karitiana_X2, 
+    marker = list(
+      color = print("forestgreen"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Karitiana"))
+
+
+Maya_X1<- Maya$X1
+Maya_X2<- Maya$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Maya_X1, 
+    y = Maya_X2, 
+    marker = list(
+      color = print("darkolivegreen3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Maya"))
+
+
+Mexican_Ancestry_X1<- Mexican_Ancestry$X1
+Mexican_Ancestry_X2<- Mexican_Ancestry$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Mexican_Ancestry_X1, 
+    y = Mexican_Ancestry_X2, 
+    marker = list(
+      color = print("limegreen"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Mexican_Ancestry"))
+
+
+
+Peruvian_X1<- Peruvian$X1
+Peruvian_X2<- Peruvian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Peruvian_X1, 
+    y = Peruvian_X2, 
+    marker = list(
+      color = print("olivedrab3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Peruvian"))
+
+
+Piapoco_X1<- Piapoco$X1
+Piapoco_X2<- Piapoco$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Piapoco_X1, 
+    y = Piapoco_X2, 
+    marker = list(
+      color = print("palegreen"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Piapoco"))
+
+
+Pima_X1<- Pima$X1
+Pima_X2<- Pima$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Pima_X1, 
+    y = Pima_X2, 
+    marker = list(
+      color = print("springgreen"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Pima"))
+
+
+Puerto_Rican_X1<- Puerto_Rican$X1
+Puerto_Rican_X2<- Puerto_Rican$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Puerto_Rican_X1, 
+    y = Puerto_Rican_X2, 
+    marker = list(
+      color = print("seagreen3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Puerto_Rican"))
+
+
+
+Surui_X1<- Surui$X1
+Surui_X2<- Surui$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Surui_X1, 
+    y = Surui_X2, 
+    marker = list(
+      color = print("palegreen"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Surui"))
+
+
+
+Mongola_X1<- Mongola$X1
+Mongola_X2<- Mongola$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Mongola_X1, 
+    y = Mongola_X2, 
+    marker = list(
+      color = print("navyblue"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Mongola"))
+
+
+Yakut_X1<- Yakut$X1
+Yakut_X2<- Yakut$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Yakut_X1, 
+    y = Yakut_X2, 
+    marker = list(
+      color = print("mediumblue"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Yakut"))
+
+
+Balochi_X1<- Balochi$X1
+Balochi_X2<- Balochi$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Balochi_X1, 
+    y = Balochi_X2, 
+    marker = list(
+      color = print("blue"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Balochi"))
+
+
+Bengali_X1<- Bengali$X1
+Bengali_X2<- Bengali$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Bengali_X1, 
+    y = Bengali_X2, 
+    marker = list(
+      color = print("royalblue2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Bengali"))
+
+
+
+Brahui_X1<- Brahui$X1
+Brahui_X2<- Brahui$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Brahui_X1, 
+    y = Brahui_X2, 
+    marker = list(
+      color = print("dodgerblue4"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Brahui"))
+
+Burusho_X1<- Burusho$X1
+Burusho_X2<- Burusho$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Burusho_X1, 
+    y = Burusho_X2, 
+    marker = list(
+      color = print("dodgerblue3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Burusho"))
+
+
+Gujarati_X1<- Gujarati$X1
+Gujarati_X2<- Gujarati$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Gujarati_X1, 
+    y = Gujarati_X2, 
+    marker = list(
+      color = print("dodgerblue2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Gujarati"))
+
+
+Hazara_X1<- Hazara$X1
+Hazara_X2<- Hazara$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Hazara_X1, 
+    y = Hazara_X2, 
+    marker = list(
+      color = print("royalblue2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Hazara"))
+
+
+Kalash_X1<- Kalash$X1
+Kalash_X2<- Kalash$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Kalash_X1, 
+    y = Kalash_X2, 
+    marker = list(
+      color = print("deepskyblue2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Kalash"))
+
+
+Makrani_X1<- Makrani$X1
+Makrani_X2<- Makrani$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Makrani_X1, 
+    y = Makrani_X2, 
+    marker = list(
+      color = print("deepskyblue1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Makrani"))
+
+
+
+Pathan_X1<- Pathan$X1
+Pathan_X2<- Pathan$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Pathan_X1, 
+    y = Pathan_X2, 
+    marker = list(
+      color = print("steelblue2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Pathan"))
+
+
+
+Punjabi_X1<- Punjabi$X1
+Punjabi_X2<- Punjabi$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Punjabi_X1, 
+    y = Punjabi_X2, 
+    marker = list(
+      color = print("skyblue3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Punjabi"))
+
+
+
+Sindhi_X1<- Sindhi$X1
+Sindhi_X2<- Sindhi$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Sindhi_X1, 
+    y = Sindhi_X2, 
+    marker = list(
+      color = print("skyblue2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Sindhi"))
+
+
+
+Tamil_X1<- Tamil$X1
+Tamil_X2<- Tamil$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Tamil_X1, 
+    y = Tamil_X2, 
+    marker = list(
+      color = print("skyblue1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Tamil"))
+
+
+Telugu_X1<- Telugu$X1
+Telugu_X2<- Telugu$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Telugu_X1, 
+    y = Telugu_X2, 
+    marker = list(
+      color = print("lightskyblue"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Telugu"))
+
+
+
+Uygur_X1<- Uygur$X1
+Uygur_X2<- Uygur$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Uygur_X1, 
+    y = Uygur_X2, 
+    marker = list(
+      color = print("lighskyblue1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Uygur"))
+
+
+Cambodian_X1<- Cambodian$X1
+Cambodian_X2<- Cambodian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Cambodian_X1, 
+    y = Cambodian_X2, 
+    marker = list(
+      color = print("powderblue"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Cambodian"))
+
+
+
+Dai_Chinese_X1<- Dai_Chinese$X1
+Dai_Chinese_X2<- Dai_Chinese$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Dai_Chinese_X1, 
+    y = Dai_Chinese_X2, 
+    marker = list(
+      color = print("darkorchid"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Dai_Chinese"))
+
+
+
+Daur_X1<- Daur$X1
+Daur_X2<- Daur$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Daur_X1, 
+    y = Daur_X2, 
+    marker = list(
+      color = print("darkmagenta"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Daur"))
+
+Han_Chinese_X1<- Han_Chinese$X1
+Han_Chinese_X2<- Han_Chinese$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Han_Chinese_X1, 
+    y = Han_Chinese_X2, 
+    marker = list(
+      color = print("darchorchid"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Han_Chinese"))
+
+
+Hezhen_X1<- Hezhen$X1
+Hezhen_X2<- Hezhen$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Hezhen_X1, 
+    y = Hezhen_X2, 
+    marker = list(
+      color = print("darchorchid1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Hezhen"))
+
+
+Japanese_X1<- Japanese$X1
+Japanese_X2<- Japanese$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Japanese_X1, 
+    y = Japanese_X2, 
+    marker = list(
+      color = print("purple3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Japanese"))
+
+
+Kinh_Vietnamese_X1<- Kinh_Vietnamese$X1
+Kinh_Vietnamese_X2<- Kinh_Vietnamese$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Kinh_Vietnamese_X1, 
+    y = Kinh_Vietnamese_X2, 
+    marker = list(
+      color = print("purple"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Kinh_Vietnamese"))
+
+
+
+Lahu_X1<- Lahu$X1
+Lahu_X2<- Lahu$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Lahu_X1, 
+    y = Lahu_X2, 
+    marker = list(
+      color = print("mediumpurple4"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Lahu"))
+
+
+
+Miao_X1<- Miao$X1
+Miao_X2<- Miao$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Miao_X1, 
+    y = Miao_X2, 
+    marker = list(
+      color = print("mediumpurple3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Miao"))
+
+
+Mongolian_X1<- Mongolian$X1
+Mongolian_X2<- Mongolian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Mongolian_X1, 
+    y = Mongolian_X2, 
+    marker = list(
+      color = print("mediumpurple2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Mongolian"))
+
+
+
+Naxi_X1<- Naxi$X1
+Naxi_X2<- Naxi$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Naxi_X1, 
+    y = Naxi_X2, 
+    marker = list(
+      color = print("orchid"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Naxi"))
+
+
+Oroqen_X1<- Oroqen$X1
+Oroqen_X2<- Oroqen$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Oroqen_X1, 
+    y = Oroqen_X2, 
+    marker = list(
+      color = print("orchid2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Oroqen"))
+
+
+
+She_X1<- She$X1
+She_X2<- She$X2
+
+plot <- plot %>%
+  add_markers(
+    x = She_X1, 
+    y = She_X2, 
+    marker = list(
+      color = print("orchid1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("She"))
+
+
+
+Tu_X1<- Tu$X1
+Tu_X2<- Tu$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Tu_X1, 
+    y = Tu_X2, 
+    marker = list(
+      color = print("plum3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Tu"))
+
+
+Tujia_X1<- Tujia$X1
+Tujia_X2<- Tujia$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Tujia_X1, 
+    y = Tujia_X2, 
+    marker = list(
+      color = print("plum2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Tujia"))
+
+
+
+Xibo_X1<- Xibo$X1
+Xibo_X2<- Xibo$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Xibo_X1, 
+    y = Xibo_X2, 
+    marker = list(
+      color = print("plum1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Xibo"))
+
+
+Yi_X1<- Yi$X1
+Yi_X2<- Yi$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Yi_X1, 
+    y = Yi_X2, 
+    marker = list(
+      color = print("lavendar"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Yi"))
+
+
+Adygei_X1<- Adygei$X1
+Adygei_X2<- Adygei$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Adygei_X1, 
+    y = Adygei_X2, 
+    marker = list(
+      color = print("darkorange4"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Adygei"))
+
+
+
+
+Basque_X1<- Basque$X1
+Basque_X2<- Basque$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Basque_X1, 
+    y = Basque_X2, 
+    marker = list(
+      color = print("darkorange3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Basque"))
+
+
+Bedouin_X1<- Bedouin$X1
+Bedouin_X2<- Bedouin$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Bedouin_X1, 
+    y = Bedouin_X2, 
+    marker = list(
+      color = print("chocolate3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Bedouin"))
+
+
+name <- print("Bergamo_Italian")
+color <- print("darkorange2")
+
+Bergamo_Italian_X1<- Bergamo_Italian$X1
+Bergamo_Italian_X2<- Bergamo_Italian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Bergamo_Italian_X1, 
+    y = Bergamo_Italian_X2, 
+    marker = list(
+      color = print("darkorange2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Bergamo Italian"))
+
+
+British_X1<- British$X1
+British_X2<- British$X2
+
+plot <- plot %>%
+  add_markers(
+    x = British_X1, 
+    y = British_X2, 
+    marker = list(
+      color = print("chocolate2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("British"))
+
+
+
+CEPH_X1<- CEPH$X1
+CEPH_X2<- CEPH$X2
+
+plot <- plot %>%
+  add_markers(
+    x = CEPH_X1, 
+    y = CEPH_X2, 
+    marker = list(
+      color = print("darkorange1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("CEPH"))
+
+
+
+Druze_X1<- Druze$X1
+Druze_X2<- Druze$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Druze_X1, 
+    y = Druze_X2, 
+    marker = list(
+      color = print("chocolate1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Druze"))
+
+
+Finnish_X1<- Finnish$X1
+Finnish_X2<- Finnish$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Finnish_X1, 
+    y = Finnish_X2, 
+    marker = list(
+      color = print("darkorange"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Finnish"))
+
+
+
+French_X1<- French$X1
+French_X2<- French$X2
+
+plot <- plot %>%
+  add_markers(
+    x = French_X1, 
+    y = French_X2, 
+    marker = list(
+      color = print("orange3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("French"))
+
+
+
+Iberian_X1<- Iberian$X1
+Iberian_X2<- Iberian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Iberian_X1, 
+    y = Iberian_X2, 
+    marker = list(
+      color = print("orange2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Iberian"))
+
+
+Orcadian_X1<- Orcadian$X1
+Orcadian_X2<- Orcadian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Orcadian_X1, 
+    y = Orcadian_X2, 
+    marker = list(
+      color = print("orange1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Orcadian"))
+
+
+Palestinian_X1<- Palestinian$X1
+Palestinian_X2<- Palestinian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Palestinian_X1, 
+    y = Palestinian_X2, 
+    marker = list(
+      color = print("orange"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Palestinian"))
+
+
+
+Russian_X1<- Russian$X1
+Russian_X2<- Russian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Russian_X1, 
+    y = Russian_X2, 
+    marker = list(
+      color = print("sienna1"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Russian"))
+
+
+
+Sardinian_X1<- Sardinian$X1
+Sardinian_X2<- Sardinian$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Sardinian_X1, 
+    y = Sardinian_X2, 
+    marker = list(
+      color = print("sienna2"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Sardinian"))
+
+
+
+Tuscan_X1<- Tuscan$X1
+Tuscan_X2<- Tuscan$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Tuscan_X1, 
+    y = Tuscan_X2, 
+    marker = list(
+      color = print("sienna3"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Tuscan"))
+
+
+Bougainville_X1<- Bougainville$X1
+Bougainville_X2<- Bougainville$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Bougainville_X1, 
+    y = Bougainville_X2, 
+    marker = list(
+      color = print("gold"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Bougainville"))
+
+
+name <- print("Papuan")
+color <- print("yellow")
+
+Papuan_X1<- Papuan$X1
+Papuan_X2<- Papuan$X2
+
+plot <- plot %>%
+  add_markers(
+    x = Papuan_X1, 
+    y = Papuan_X2, 
+    marker = list(
+      color = print("yellow"),
+      size = 5,
+      opacity = 1,
+      line = list(
+        color = '',
+        width = 1
+      )), name = print("Papuan"))
+
+x <- list(
+  title = "X1")
+y <- list(
+  title = "X2")
+
+plot <- plot %>% layout(xaxis = x, yaxis = y, showlegend = TRUE, legend = list(font = list(size = 10))) 
+
+png("umap_tsne.png", width=10, height=5, units="in", res=1000)
+plot
+dev.off()
+```
