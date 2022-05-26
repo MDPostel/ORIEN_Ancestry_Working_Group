@@ -1,3 +1,9 @@
-First run filtering scripts for each dataset (n=4); then run AIMs.slurm.
+Run in this order:
 
-![Methods](https://github.com/MDPostel/ORIEN_Ancestry_Working_Group/blob/main/Ancestry_Informative_SNPs/AIMs.jpg)
+1) [gnomad.slurm](https://github.com/MDPostel/ORIEN_Ancestry_Working_Group/blob/main/Ancestry_Informative_SNPs/gnomad.slurm)
+
+2) [ORIEN.slurm](https://github.com/MDPostel/ORIEN_Ancestry_Working_Group/blob/main/Ancestry_Informative_SNPs/ORIEN.slurm)
+
+
+
+![Methods](https://github.com/MDPostel/ORIEN_Ancestry_Working_Group/blob/main/Ancestry_Informative_SNPs/AIMs_May2022.jpeg)
