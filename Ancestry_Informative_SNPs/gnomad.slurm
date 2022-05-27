@@ -31,6 +31,7 @@ echo filtering for biallelic SNPs and MAF >=1%
 for i in {1..22}; do bcftools view -m2 -M2 -v snps -e 'MAF<0.01' gnomad.genomes.v3.1.2.hgdp_tgp.chr${i}_PASS_subsetbyextendedbed.vcf.gz -Oz -o gnomad.genomes.v3.1.2.hgdp_tgp.chr${i}_PASS_subsetbyextendedbed_snps_maf01.vcf.gz; bcftools index -t gnomad.genomes.v3.1.2.hgdp_tgp.chr${i}_PASS_subsetbyextendedbed_snps_maf01.vcf.gz --threads $t; done
 
 #AS OF MAY 2022 - NOT PERFORMING VQSR FILTER ON GNOMAD; ALREADY HAS QUALITY SCORE ANNOTATION "PASS"
+#----------------------------------------------------------------------------------------------
 	#VQSR
 #echo VQSR
 #GP1000_ref=$(echo "/project/davidwcr_264/Projects/Mackenzie/resources/GRCh38_full_analysis_set_plus_decoy_hla.fa")
