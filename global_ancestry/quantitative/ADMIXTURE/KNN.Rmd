@@ -41,6 +41,7 @@ names(df)[20] <- "Q17"
 names(df)[21] <- "Q18"
 names(df)[22] <- "Q19"
 names(df)[23] <- "Q20"
+write.csv(df, "ORIEN_gnomAD_K20_Admixture_Qvalues_with_IDs.csv")
 
 ```
 
