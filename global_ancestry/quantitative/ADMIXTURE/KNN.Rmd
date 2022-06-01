@@ -1,0 +1,89 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Read in data
+```{r}
+Qref <- read.csv("GNOMADisec.20.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+Qsam <- read.csv("ORIENisec_missing10.20.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+Qboth <- rbind(Qref,Qsam)
+
+fam_ref <- read.csv("GNOMADisec.fam", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+fam_sam <- read.csv("ORIENisec_missing10.fam", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+fam_both <- rbind(fam_ref,fam_sam)
+
+names(fam_both)[1] <- "WES_ID"
+Qfam2 <- cbind(Qboth,fam_both)
+Qfam2 <- Qfam2[,c(21,1:20)]
+
+df4 <- merge(Qfam2, IDs2, by="WES_ID")
+data_tsne4 <- df4[,c(1,22,23,2:21)]
+
+df <-subset(data_tsne4, data_tsne4$superpop != "N/A")
+names(df)[4] <- "Q1"
+names(df)[5] <- "Q2"
+names(df)[6] <- "Q3"
+names(df)[7] <- "Q4"
+names(df)[8] <- "Q5"
+names(df)[9] <- "Q6"
+names(df)[10] <- "Q7"
+names(df)[11] <- "Q8"
+names(df)[12] <- "Q9"
+names(df)[13] <- "Q10"
+names(df)[14] <- "Q11"
+names(df)[15] <- "Q12"
+names(df)[16] <- "Q13"
+names(df)[17] <- "Q14"
+names(df)[18] <- "Q15"
+names(df)[19] <- "Q16"
+names(df)[20] <- "Q17"
+names(df)[21] <- "Q18"
+names(df)[22] <- "Q19"
+names(df)[23] <- "Q20"
+
+```
+
+Execute knn on a dataset and calculate the accuracy metrics for the predictions.
+  If the input matrix number of columns does not match the number of values in `code`, then the matrix is transposed and used.
+
+  m = The matrix of samples (columns) for a series of attributes (rows).
+  codes = classes/codes to train to predict.
+  only_accuracy = Return only accuracy (single value) or a list of metrics (default=TRUE).
+  k = The k to use in knn
+  return = Either a single number (accuracy) or a list (accuracy, extended metrics) if the parameter `only_accuracy` is set to FALSE.
+
+Example:
+simple_metric(t(iris[,1:4]), iris[,5])
+
+-------------------------
+RUN FOR SUPERPOPULATIONS
+```{r}
+simple_metric <- function(m, codes, only_accuracy=TRUE, k = 5) {
+  if ( nrow(m) != length(codes))
+    m <- t(m)
+  stopifnot(nrow(m) == length(codes))
+
+  class_labels <- unique(sort(codes))
+
+  preds <- class::knn(m, m, cl = codes, k = k)
+
+  cm <- caret::confusionMatrix(
+    data=factor(preds, levels = class_labels),
+    reference = factor(codes, levels = class_labels)
+  )
+  if ( only_accuracy )
+    cm$overall[["Accuracy"]]
+  else
+    list(accuracy = cm$overall[["Accuracy"]], summary = cm)
+}
+
+simple_metric(t(df[,4:23]), df[,3])
+```
+
+-------------------------
+RUN FOR SUBPOPULATIONS
+```{r}
+simple_metric(t(df[,4:23]), df[,2])
+```
+
