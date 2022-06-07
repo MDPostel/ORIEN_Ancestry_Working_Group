@@ -16,9 +16,9 @@ chr=$(echo 1)
 #plink --bfile ${bed} --recode --out isec
 
 echo Activating conda py-popgen environment to run beagle and phase VCFs
-#conda create -n rfmix
-conda activate rfmix
-#conda install -c bioconda rfmix
+#conda create -n py-popgen
+conda activate py-popgen
+#conda install -c bioconda py-popgen
 
 vcf_phase.py --vcf $query_vcf --phase-algorithm beagle --out ORIEN_TCGA_chrfix_phased --out-format vcf.gz
 vcf_phase.py --vcf $ref_vcf --phase-algorithm beagle --out HGDP_1000GP_chrfix_phased --out-format vcf.gz
