@@ -1,0 +1,67 @@
+---
+title: "Merge RFMix Per-Chromosome Output"
+output: html_notebook
+---
+
+
+```{r}
+chr1 <- read.csv("rfmix_chr1.msp.tsv", sep="\t")
+chr2 <- read.csv("rfmix_chr2.msp.tsv", sep="\t")
+chr3 <- read.csv("rfmix_chr3.msp.tsv", sep="\t")
+chr4 <- read.csv("rfmix_chr4.msp.tsv", sep="\t")
+chr5 <- read.csv("rfmix_chr5.msp.tsv", sep="\t")
+chr6 <- read.csv("rfmix_chr6.msp.tsv", sep="\t")
+chr7 <- read.csv("rfmix_chr7.msp.tsv", sep="\t")
+chr8 <- read.csv("rfmix_chr8.msp.tsv", sep="\t")
+chr9 <- read.csv("rfmix_chr9.msp.tsv", sep="\t")
+chr10 <- read.csv("rfmix_chr10.msp.tsv", sep="\t")
+chr11 <- read.csv("rfmix_chr11.msp.tsv", sep="\t")
+chr12 <- read.csv("rfmix_chr12.msp.tsv", sep="\t")
+chr13 <- read.csv("rfmix_chr13.msp.tsv", sep="\t")
+chr14 <- read.csv("rfmix_chr14.msp.tsv", sep="\t")
+chr15 <- read.csv("rfmix_chr15.msp.tsv", sep="\t")
+chr16 <- read.csv("rfmix_chr16.msp.tsv", sep="\t")
+chr17 <- read.csv("rfmix_chr17.msp.tsv", sep="\t")
+chr18 <- read.csv("rfmix_chr18.msp.tsv", sep="\t")
+chr19 <- read.csv("rfmix_chr19.msp.tsv", sep="\t")
+chr20 <- read.csv("rfmix_chr20.msp.tsv", sep="\t")
+chr21 <- read.csv("rfmix_chr21.msp.tsv", sep="\t")
+chr22 <- read.csv("rfmix_chr22.msp.tsv", sep="\t")
+
+autosomes <- rbind(chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22)
+
+write_tsv(autosomes,"RFMix_concat_chr_output.tsv")
+```
+
+```{r}
+individual <- "ID" 
+
+hap_A <- autosomes$ID.0
+hap_B <- autosomes$ID.1
+chr <- autosomes$X.chm
+start <- autosomes$spos
+stop <- autosomes$epos
+
+
+pop1 <- ifelse(hap_A == 0, "AFR",
+                   ifelse(hap_A == 1, "AMR",
+                   ifelse(hap_A == 2, "CAS",
+                   ifelse(hap_A == 3, "EAS",
+                   ifelse(hap_A == 4, "EUR",
+                   ifelse(hap_A == 5, "MDE",
+                   ifelse(hap_A == 6, "OCE",
+                   ifelse(hap_A == 7, "SAS", 'other'))))))))
+
+pop2 <- ifelse(hap_B == 0, "AFR",
+                   ifelse(hap_B == 1, "AMR",
+                   ifelse(hap_B == 2, "CAS",
+                   ifelse(hap_B == 3, "EAS",
+                   ifelse(hap_B == 4, "EUR",
+                   ifelse(hap_B == 5, "MDE",
+                   ifelse(hap_B == 6, "OCE",
+                   ifelse(hap_B == 7, "SAS", 'other'))))))))
+
+ID_pop <- cbind(chr,start,stop,hap_A,pop1,hap_B,pop2)
+write.csv(ID_pop, "ORIEN_ID_pop_RFMix_autosomes.csv")
+
+```
