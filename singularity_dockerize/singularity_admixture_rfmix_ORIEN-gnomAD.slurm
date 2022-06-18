@@ -53,8 +53,11 @@ iterations=100 #default is off
 threads=64
 window_size=$(echo "0.2")
 out=$(echo rfmix_chr${i})
+alleles=$(echo )
+classes=$(echo )
+locations=$(echo )
 
 for i in {1..22}
     do
-singularity exec --bind ${dir}:/input rfmix1.sif /opt/hall-lab/python-2.7.15/bin/RunRFMix.py -G ${generations} -e ${iterations} -w ${window_size} --num-threads ${threads} --use-reference-panels-in-EM --forward-backward -o ${out}
+singularity exec --bind ${dir}:/input rfmix1.sif /opt/hall-lab/python-2.7.15/bin/RunRFMix.py -G ${generations} -e ${iterations} -w ${window_size} --num-threads ${threads} --use-reference-panels-in-EM --forward-backward -o ${out} ${alleles} ${classes} ${locations}
     done
