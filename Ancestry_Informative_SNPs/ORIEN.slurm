@@ -75,11 +75,6 @@ mv 0002.vcf.gz ${name}_subsetbed_dbSNPisec.vcf.gz
 mkdir chr${i}; cd chr${i}
 bcftools index -t -f ${name}_subsetbed_dbSNPisec.vcf.gz --threads $t
 
-	#AS OF MAY 2022 - NO LONGER FILTERING ON DP
-#ORIEN2=$(echo "/project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/isec/ORIEN/${name}_subsetbed_dbSNPisec.vcf.gz")
-#bcftools filter --include 'INFO/DP>20' $ORIEN2 -Oz -o ${name}_subsetbed_dbSNPisec_DPgt20.vcf.gz --threads $t
-#tabix -f ${name}_subsetbed_dbSNPisec_DPgt20.vcf.gz
-
 
 #4)#---------------------------
 #SORT
@@ -88,7 +83,7 @@ cd /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/
 file=$(echo "/project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/isec/ORIEN/ORIEN_CombineGVCFs_${new_date}_chr${i}_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec.vcf.gz")
 
 bcftools sort -m ${mem}G -T ./ $file -Oz -o ORIEN_CombineGVCFs_${new_date}_chr1_comb1_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_sorted.vcf.gz
-bcftools index -t -f ORIEN_CombineGVCFs_${new_date}_chr1_comb1_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_DPgt20_sorted.vcf.gz --threads $t
+bcftools index -t -f ORIEN_CombineGVCFs_${new_date}_chr1_comb1_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_sorted.vcf.gz --threads $t
 
 
 #5)---------------------------
@@ -151,4 +146,3 @@ bcftools merge ORIEN_CombineGVCFs_Mar2022_chrALL_GATKGenotypeGVCFs_gVCF2vcf_subs
 bcftools index -t -f gnomad_ORIEN_May2022_chrALL_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_ref-maf01_sorted_reheader_resorted_samplesordered_biallelicSNPs_missing10_sorted_isec.vcf.gz --threads 64
 
 plink --vcf gnomad_ORIEN_May2022_chrALL_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_ref-maf01_sorted_reheader_resorted_samplesordered_biallelicSNPs_missing10_sorted_isec.vcf.gz --make-bed --out ORIEN-GNOMAD-isec-missing10 --double-id
-
