@@ -27,6 +27,7 @@ cd /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset
 #for each chromosome $i
 
 #1)#---------------------------
+	#OPTION 1: RUN GATK CombineGVCFs
 /home1/mpostel/bin/gatk/gatk --java-options "-Xmx${mem}g -Xms${mem}g" CombineGVCFs \
    -L chr${i} \
    --tmp-dir /scratch1/mpostel \
@@ -35,11 +36,20 @@ cd /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset
 # list all g.VCFs being used for SNP selection as shown above
    -O ORIEN_CombineGVCFs_Mar2022_chr${i}.vcf.gz
 
-
+	#OPTION 2: RUN GATK GenomicsDBImport
+/home1/mpostel/bin/gatk/gatk --java-options "-Xmx${mem}g -Xms200g -XX:ParallelGCThreads=5" GenomicsDBImport \
+   --genomicsdb-workspace-path /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/my_GenomicsDBImport_chr${i} \
+   -L chr${i}  \
+   --genomicsdb-vcf-buffer-size 50000 \
+   --batch-size 50 \
+   --reader-threads 5 \
+   --tmp-dir /scratch2/mpostel \
+   --sample-name-map orien_usc_plus_intermember_cohort.sample_map
+   
 #2)#---------------------------
 #GVCF <REF> BLOCKS to VCF FORMAT
 
-	#OPTION 1: RUN GATK GENOTYPEGVCFS
+	#OPTION 1: If ran CombineGVCFs:
 
 echo "Genotyping g.VCFs"
 name=$(echo ORIEN_CombineGVCFs_${new_date}_chr${i})
@@ -52,15 +62,17 @@ $gatk --java-options "-Xmx${mem}g -Xms${mem}g" GenotypeGVCFs \
    --allow-old-rms-mapping-quality-annotation-data
 tabix -f ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz
 
-	#OPTION 2: RUN GATK COMBINEGVCFS
-/home1/mpostel/bin/gatk/gatk --java-options "-Xmx${mem}g -Xms200g -XX:ParallelGCThreads=5" GenomicsDBImport \
-   --genomicsdb-workspace-path /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/my_GenomicsDBImport_chr${i} \
-   -L chr${i}  \
-   --genomicsdb-vcf-buffer-size 50000 \
-   --batch-size 50 \
-   --reader-threads 5 \
-   --tmp-dir /scratch2/mpostel \
-   --sample-name-map orien_usc_plus_intermember_cohort.sample_map
+	#OPTION 1: If ran GenomicsDBImport:
+name=$(echo ORIEN_CombineGVCFs_${new_date}_chr${i})
+$gatk --java-options "-Xmx${mem}g -Xms200g" GenotypeGVCFs \
+   -R $ref \
+   -V gendb://my_GenomicsDBImport_chr${i} \
+   -O ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz \
+   --verbosity ERROR \
+   --allow-old-rms-mapping-quality-annotation-data
+tabix -f ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz
+
+	
 
 #3)#---------------------------
 #SUBSET BY EXOME BED AND DBSNP VCF; FILTER FOR DP>20
@@ -146,3 +158,4 @@ bcftools merge ORIEN_CombineGVCFs_Mar2022_chrALL_GATKGenotypeGVCFs_gVCF2vcf_subs
 bcftools index -t -f gnomad_ORIEN_May2022_chrALL_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_ref-maf01_sorted_reheader_resorted_samplesordered_biallelicSNPs_missing10_sorted_isec.vcf.gz --threads 64
 
 plink --vcf gnomad_ORIEN_May2022_chrALL_GATKGenotypeGVCFs_gVCF2vcf_subsetbed_dbSNPisec_ref-maf01_sorted_reheader_resorted_samplesordered_biallelicSNPs_missing10_sorted_isec.vcf.gz --make-bed --out ORIEN-GNOMAD-isec-missing10 --double-id
+
