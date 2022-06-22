@@ -75,7 +75,7 @@ tabix -f ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz
 	
 
 #3)#---------------------------
-#SUBSET BY EXOME BED AND DBSNP VCF; FILTER FOR DP>20
+#SUBSET BY EXOME BED AND DBSNP VCF
 
 file=$(echo /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/ORIEN_CombineGVCFs_${new_date}_chr${i}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz)
 name=$(echo $file | cut -d"/" -f9 | cut -d"." -f1)
