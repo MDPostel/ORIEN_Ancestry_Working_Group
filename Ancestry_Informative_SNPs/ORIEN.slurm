@@ -37,6 +37,7 @@ cd /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset
    -O ORIEN_CombineGVCFs_Mar2022_chr${i}.vcf.gz
 
 	#OPTION 2: RUN GATK GenomicsDBImport
+	#make sample_map file by running: for i in $(ls *gz); do match=$(bcftools view -h $i | grep CHROM | awk '{print $10}'); echo "$match      $PWD/$i"; done > {sample_map}
 /home1/mpostel/bin/gatk/gatk --java-options "-Xmx${mem}g -Xms200g -XX:ParallelGCThreads=5" GenomicsDBImport \
    --genomicsdb-workspace-path /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset/my_GenomicsDBImport_chr${i} \
    -L chr${i}  \
