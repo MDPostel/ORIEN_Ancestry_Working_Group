@@ -50,7 +50,7 @@ cd /project/davidwcr_264/Projects/Mackenzie/ORIEN/orien_ancestry/subset
 #2)#---------------------------
 #GVCF <REF> BLOCKS to VCF FORMAT
 
-	#OPTION 1: If ran CombineGVCFs:
+	#OPTION 1: If you ran CombineGVCFs:
 
 echo "Genotyping g.VCFs"
 name=$(echo ORIEN_CombineGVCFs_${new_date}_chr${i})
@@ -63,7 +63,7 @@ $gatk --java-options "-Xmx${mem}g -Xms${mem}g" GenotypeGVCFs \
    --allow-old-rms-mapping-quality-annotation-data
 tabix -f ${name}_GATKGenotypeGVCFs_gVCF2vcf.vcf.gz
 
-	#OPTION 1: If ran GenomicsDBImport:
+	#OPTION 2: If you ran GenomicsDBImport:
 name=$(echo ORIEN_CombineGVCFs_${new_date}_chr${i})
 $gatk --java-options "-Xmx${mem}g -Xms200g" GenotypeGVCFs \
    -R $ref \
