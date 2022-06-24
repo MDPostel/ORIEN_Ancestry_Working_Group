@@ -4,7 +4,7 @@ output: html_notebook
 ---
 
 
-#N.B. Only thing you need to change is line 7, below:
+#N.B. Only thing you need to change is line 9, below:
 ```{r}
 individual_ID <- ""
 ```
