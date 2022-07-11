@@ -6,7 +6,7 @@
 #singularity pull --name rfmix2.sif docker://indraniel/rfmix:v2
 #singularity pull --name rfmix1.sif docker://indraniel/rfmix:v1
 #singularity pull bcftools.sif oras://registry.forgemia.inra.fr/gafl/singularity/bcftools/bcftools:latest
-
+#singularity pull --name plink.sif docker://biocontainers/plink1.9:v1.90b6.6-181012-1-deb_cv1
 
 #|---------------------------------------ADMIXTURE---------------------------------------|
 
@@ -15,23 +15,25 @@ vcf=$(echo {ORIEN_vcf})
 
 #FYI: This is how the gnomAD Admixture input was generated
     #echo "Training Admixture K=${K} on reference individuals"
+    #refs=$(echo gnomAD.bed)
     #singularity exec --bind ${dir}:/input ${dir}/admixture.sif admixture ${refs} ${K} -j${threads} --cv=10
-    #cp {gnomAD_bed}.${K}.P {ORIEN_bed}.${K}.P.in
+    #cp gnomAD.${K}.P ORIEN.${K}.P.in
 
 #constants:
-refs=$(echo {gnomAD_bed})
 pop=$(echo {admixture_supervised_key_pop})
 dir=$(echo $PWD)
+#K=20 #run separately for 5-20 or using for-loop as shown below
+gnomAD=$(echo ORIEN.${K}.P.in)
+threads=64
 
 singularity exec --bind ${dir}:/input ${dir}/bcftools.sif bcftools isec $refs $vcf -Oz -o intersection.vcf
 singularity exec --bind ${dir}:/input ${dir}/plink.sif plink --make-bed --vcf intersection.vcf --out ORIEN.bed
-
-samples=$(echo ORIEN.bed)
+sample=$(echo ORIEN.bed)
 
 for K in {5..20}
     do
 echo "Using K=${K} reference results for analysis of ORIEN samples"
-singularity exec --bind ${dir}:/input ${dir}/admixture.sif admixture -P ${samples} ${K} -j${threads} --cv=10
+singularity exec --bind ${dir}:/input ${dir}/admixture.sif admixture -P ${sample} ${K} -j${threads} --cv=10
 echo done
     done
  
