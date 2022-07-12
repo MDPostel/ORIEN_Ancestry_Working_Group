@@ -13,7 +13,6 @@ dir=$(echo $PWD)
 #-------------------------
 #1) SINGULARITY IMAGES:
    #singularity pull --name admixture.sif docker://evolbioinfo/admixture:v1.3.0
-   #singularity pull --name vcf2bed.sif docker://dockerbiotools/bedops:latest
    #singularity pull bcftools.sif oras://registry.forgemia.inra.fr/gafl/singularity/bcftools/bcftools:latest
    #singularity pull --name plink.sif docker://biocontainers/plink1.9:v1.90b6.6-181012-1-deb_cv1
 #2) gnomAD ADMIXTURE RESULTS (USE THIS PROJECTION EVERY TIME; DOES NOT CHANGE)
