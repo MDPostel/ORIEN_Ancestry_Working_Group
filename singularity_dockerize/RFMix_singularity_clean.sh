@@ -23,7 +23,7 @@ iterations=100 #default is off
 for i in {1..22}
     do
 echo "Running RFMix on chr${i}"
-singularity exec --bind ${dir}:/input ${dir}/rfmix2.sif rfmix -f ${query_vcf} -r ${ref_vcf} -m ${sample_map} -g ${genetic_map} -o ${out} --chromosome=${i} --n-threads=${threads} -G ${generations} --reanalyze-reference -e ${iterations} 
+singularity exec --bind ${dir}:/input ${dir}/rfmix2.sif RunRFMix.py -f ${query_vcf} -r ${ref_vcf} -m ${sample_map} -g ${genetic_map} -o ${out} --chromosome=${i} --n-threads=${threads} -G ${generations} --reanalyze-reference -e ${iterations} 
     done
     
 #|---------------------------------------RFMixver1---------------------------------------|    
