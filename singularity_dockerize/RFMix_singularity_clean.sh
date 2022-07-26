@@ -7,8 +7,8 @@
 #|---------------------------------------RFMixver2---------------------------------------|
 
 threads=64
-singularity exec --bind ${dir}:/input ${dir}/jdk.sif java -jar beagle.25Mar22.4f6.jar gt={ORIEN_vcf} out={phased_ORIEN_vcf} nthreads=${threads}
-singularity exec --bind ${dir}:/input ${dir}/jdk.sif java -jar beagle.25Mar22.4f6.jar gt={gnomAD_vcf} out={phased_gnomAD_vcf} nthreads=${threads}
+singularity exec --bind ${dir}:/input ${dir}/jdk.sif java -jar beagle.25Mar22.4f6.jar gt=/input/{ORIEN_vcf} out={phased_ORIEN_vcf} nthreads=${threads}
+singularity exec --bind ${dir}:/input ${dir}/jdk.sif java -jar beagle.25Mar22.4f6.jar gt=/input/{gnomAD_vcf} out={phased_gnomAD_vcf} nthreads=${threads}
 
 query_vcf=$(echo {phased_ORIEN_vcf})
 ref_vcf=$(echo {phased_gnomAD_vcf})
