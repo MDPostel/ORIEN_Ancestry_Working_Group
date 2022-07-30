@@ -1,20 +1,24 @@
 #!/usr/bin/bash
 
-#-------------------------
+#----------------------------------------
   #ONLY INPUT USER CHANGES PER RUN:
-#-------------------------
+#----------------------------------------
 samples=$(echo {ORIEN_vcf})
 dir=$(echo $PWD)
 
-#-------------------------
-  #RUN ADMIXTURE:
-#-------------------------
+#----------------------------------------
+  #FILES REQUIRED IN WORKING DIRECTORY:
+#----------------------------------------
+refs=$(echo gnomAD.vcf.gz)
+#singularity image files, which can be retrieved by:
   #singularity pull --name admixture.sif docker://evolbioinfo/admixture:v1.3.0
   #singularity pull bcftools.sif oras://registry.forgemia.inra.fr/gafl/singularity/bcftools/bcftools:latest
   #singularity pull --name plink.sif docker://biocontainers/plink1.9:v1.90b6.6-181012-1-deb_cv1
 
+#----------------------------------------
+  #RUN ADMIXTURE:
+#----------------------------------------
 threads=64
-refs=$(echo gnomAD.vcf.gz)
 export SINGULARITY_BINDPATH="$dir"
    
 singularity exec --bind ${dir}:/input ${dir}/bcftools.sif bcftools isec /input/${refs}  /input/${vcf} -Oz  --threads 64 -p ./
