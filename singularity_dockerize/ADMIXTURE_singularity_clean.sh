@@ -33,13 +33,13 @@ singularity exec --bind ${dir}:/input ${dir}/plink.sif plink1.9 --make-bed --vcf
 for K in {5..20}
     do
 echo "Training Admixture K=${K} on reference individuals"
-singularity exec --bind ${dir}:/input ${dir}/admixture.sif admixture /input/refs.vcf.gz ${K} -j${threads} --cv=10
+singularity exec --bind ${dir}:/input ${dir}/admixture.sif admixture /input/refs.bed ${K} -j${threads} --cv=10
 cp refs.${K}.P samples.${K}.P.in
     done
 
 for K in {5..20}
     do
 echo "Using K=${K} reference results for analysis of ORIEN samples"
-singularity exec --bind ${dir}:/input ${dir}/admixture.sif admixture -P /input/samples.vcf.gz ${K} -j${threads} --cv=10
+singularity exec --bind ${dir}:/input ${dir}/admixture.sif admixture -P /input/samples.bed ${K} -j${threads} --cv=10
 echo done
     done
