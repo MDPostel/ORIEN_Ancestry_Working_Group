@@ -1,0 +1,659 @@
+---
+title: "Admixture_Stacked_Barplot_K5"
+output: html_notebook
+---
+
+Load libraries
+```{r}
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dplyr)
+library(data.table)
+library(tidyverse)
+library(plotly)
+library(plyr)
+library(stringi)
+```
+
+Read in race/ethnicity info from ORIEN 
+```{r}
+clinlinkage <- read.csv("20PRJ071USC_20210928_ClinicalMolLinkage_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+key_SLID <- subset(clinlinkage, Tumor.Germline == "Germline")
+key_SLID2 <- key_SLID[,c(1,3)]
+demos <- read.csv("20PRJ071USC_20210928_PatientMaster_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+demos2 <- demos[,c(1,5,6)]
+names(key_SLID2)[names(key_SLID2 ) == "ORIENAvatarKey" ] <- "AvatarKey"
+merge <- merge(x = key_SLID2,y = demos2, by='AvatarKey', sort=FALSE, all=TRUE)
+names(merge)[names(merge ) == "WES" ] <- "WES_ID"
+merge2 <- merge[,c(2,3,4)]
+
+USC <-  read.csv("20211203_USC_ClinicalMolLinkage_V4.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+names(USC)[names(USC ) == "ORIENAvatarKey" ] <- "key"
+key <- read.csv("V4_RecordKey_Jan2022.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+names(key)[names(key ) == "Avatar.Patient.ID" ] <- "key"
+key <- key[,c(4,6,7)]
+USC2 <- merge(x=USC, y=key, by="key")
+USC2 <- USC2[,c(4,21,22)]
+names(USC2)[names(USC2 ) == "WES" ] <- "WES_ID"
+all <- bind_rows(merge2,USC2)
+all <- all[-which(all$WES_ID == ""), ]
+
+all[all$Race == "Black",]$Race = "Black_or_African_American"
+all[all$Race == "Unknown/Not Reported",]$Race = "Unknown/Not_Reported"
+all[all$Race == "Other Asian, including Asian, NOS and Oriental, NOS",]$Race = "Asian"
+all[all$Race == "Filipino",]$Race = "Asian"
+all[all$Race == "Chinese",]$Race = "Asian"
+all[all$Race == "Korean",]$Race = "Asian"
+all[all$Race == "American Indian, Aleutian, or Eskimo (includes all indigenous populations of the Western Hemisphere)",]$Race = "American_Indian_or_Alaska_Native"
+all[all$Race == "American Indian, Aleutian, or Eskimo (includes all indigenous populations of the Western hemisphere)",]$Race = "American_Indian_or_Alaska_Native"
+all[all$Race == "Asian Indian or Pakistani, NOS",]$Race = "Asian"
+all[all$Race == "Asian Indian",]$Race = "Asian"
+all[all$Race == "Vietnamese",]$Race = "Asian"
+all[all$Race == "Japanese",]$Race = "Asian"
+all[all$Race == "Pacific Islander, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Unknown/Not Applicable",]$Race = "Unknown/Not_Reported"
+all[all$Race == "Hawaiian",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Laotian",]$Race = "Asian"
+all[all$Race == "Pakistani",]$Race = "Asian"
+all[all$Race == "Kampuchean (Cambodian)",]$Race = "Asian"
+all[all$Race == "Polynesian, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+all[all$Race == "Thai",]$Race = "Asian"
+all[all$Race == "Guamanian, NOS",]$Race = "Hawaiian_or_Other_Pacific_Islander"
+
+all[all$Ethnicity == "Non-Spanish; Non-Hispanic",]$Ethnicity = "Not_Hispanic/Not_Latino" 
+all[all$Ethnicity == "Spanish, NOS; Hispanic, NOS; Latino, NOS",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Unknown/Not Reported",]$Ethnicity = "Unknown/Not_Reported"
+all[all$Ethnicity == "Mexican (includes Chicano)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "South or Central American (except Brazil)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Puerto Rican",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Unknown/Not Applicable",]$Ethnicity = "Unknown/Not_Reported"
+all[all$Ethnicity == "Cuban",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Other specified Spanish/Hispanic origin (includes European; excludes Dominican Republic)",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Spanish surname only",]$Ethnicity = "Hispanic/Latino"
+all[all$Ethnicity == "Dominican Republic",]$Ethnicity = "Hispanic/Latino"
+
+
+TCGA_race <- read.csv("TCGA_vcfIDs_race_uniq_final.tsv", sep = "\t", header = FALSE, stringsAsFactors = FALSE, fill = TRUE)
+TCGA_ethnicity <- read.csv("TCGA_vcfIDs_ethnicity_uniq_final.tsv", sep = "\t", header = FALSE, stringsAsFactors = FALSE, fill = TRUE)
+names(TCGA_race)[2] <- "Race"
+names(TCGA_ethnicity)[2] <- "Ethnicity"
+names(TCGA_race)[1] <- "WES_ID"
+names(TCGA_ethnicity)[1] <- "WES_ID"
+TCGA <- merge(x = TCGA_race, y = TCGA_ethnicity, by="WES_ID")
+
+merge5 <- bind_rows(TCGA,all)
+
+race <- merge5[,c(1,2)]
+names(race)[names(race) == "Race"] <- "pop"
+ethnicity <- merge5[,c(1,3)]
+names(ethnicity)[names(ethnicity) == "Ethnicity"] <- "pop"
+
+str_replace(race$WES_ID, "_st_g", "")
+str_replace(ethnicity$WES_ID, "_st_g", "")
+```
+
+Standardize/harmonize and combine fam + Q + pop info
+```{r}
+#Q1 <- read.table("gnomad.5.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+
+Q1 <- read.table("refs.5.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(6,1:5)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+
+
+```
+
+```{r}
+#refpops_HGDP <- read_tsv("igsr-human genome diversity project.tsv.tsv")
+#refpops_1000GP <- read_tsv("igsr-1000 genomes 30x on grch38.tsv.tsv")
+#refpops_igsr <- read_tsv("igsr_samples3.tsv")
+
+#refpops_igsr <- refpops_igsr[,c(1,4)]
+#refpops_HGDP2 <- refpops_HGDP[,c(1,4)]
+#refpops_1000GP2 <- refpops_1000GP[,c(1,4)]
+#refpops2 <- unique(rbind(refpops_HGDP2,refpops_1000GP2,refpops_igsr))
+refpops2 <- read.csv("ORIEN_gnomad_IDs_pops.csv")
+#names(refpops2)[names(refpops2) == "Sample name"] <- "WES_ID"
+#names(refpops2)[names(refpops2) == "Superpopulation name"] <- "pop"
+#GP1000_PR <- subset(refpops2,refpops2$`Population code`=="PUR")
+
+#GP1000_PR2 <- merge(GP1000_PR, HGDP_1000GP, by="WES_ID", all = FALSE)
+df <- merge(refpops2,gnomAD, by="WES_ID")
+gnomAD_PR <- subset(df,df$pop =="Puerto Rican")
+```
+
+Key
+#000000 = black --> EUR N.
+#E69F00 = light orange --> Indig Am.
+#56B4E9 = light blue --> OCE
+#009E73 = green --> EUR South
+#F0E442 = yellow --> SAS
+#0072B2 = dark blue --> AFR C/S
+#D55E00 = red/dark orange --> EAS
+#CC79A7 = pink --> AFR W.
+
+In this run:
+Q1 = EUR N
+Q2 = AMR
+Q3 = OCE
+Q4 = MDE/EUR S
+Q5 = SAS
+Q6 = AFR C/S
+Q7 = EAS
+Q8 = AFR W
+
+
+```{r}
+cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+gnomAD PR
+```{r}
+#df <- GP1000_PR2
+df1 <- unique(gnomAD_PR)
+
+df2 <- df1[,c(1,3,5:9)]
+names(df2)[1] <- "ID"
+names(df2)[2] <- "gnomAD_PR"
+names(df2)[3] <- "Q1"
+names(df2)[4] <- "Q2"
+names(df2)[5] <- "Q3"
+names(df2)[6] <- "Q4"
+names(df2)[7] <- "Q5"
+
+mdat = reshape2::melt(df2, id.vars=c("ID", "gnomAD_PR"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+        geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ gnomAD_PR, drop=TRUE, space="free") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("bar_plots_gnomAD_PR_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+
+ORIEN: Puerto Rican
+```{r}
+#Q2 <- read.table("ORIEN.5.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+Q2 <- read.table("samples.5.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam2 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+raw_fam2 <- raw_fam2[,c(1,2)]
+names(raw_fam2)[1] <- "WES_ID"
+
+samples <- cbind(Q2,raw_fam2)
+samples <-samples[,c(6,1:5)]
+names(samples)[1] <- "WES_ID"
+names(samples)[2] <- "Q1"
+names(samples)[3] <- "Q2"
+names(samples)[4] <- "Q3"
+names(samples)[5] <- "Q4"
+names(samples)[6] <- "Q5"
+
+df3 <- read.csv("ORIEN_PR_list.csv")
+ORIEN_PR <- merge(df3, samples, by="WES_ID")
+```
+
+```{r}
+df4 <- unique(ORIEN_PR)
+
+#df4$sum=rowSums(cbind(df4$`Q1 - EAS`,df4$`Q2 - EUR`,df4$`Q3 - AMR`,df4$`Q4 - SAS`,df4$`Q5 - AFR`),na.rm=TRUE)
+
+# Add id and self_ID_race label columns. Needed for reshape2::melting and plotting.
+names(df4)[1] <- "ID"
+names(df4)[2] <- "ORIEN_PR"
+names(df4)[3] <- "Q1"
+names(df4)[4] <- "Q2"
+names(df4)[5] <- "Q3"
+names(df4)[6] <- "Q4"
+names(df4)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(df4, id.vars=c("ID", "ORIEN_PR"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+
+```{r}
+cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+
+```{r}
+plot.new()            # Create empty plot in RStudios default window
+dev.new(width = 400,   # Create new plot window
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+# Simple stacked bar plot:
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry, order=Ancestry)) +
+        geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ ORIEN_PR, drop=TRUE, space="free") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=12)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("bar_plots_ORIEN_PR_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+#--------------
+gnomAD
+
+```{r}
+#earlier step: df <- merge(refpops2,gnomAD, by="WES_ID")
+AFR <- subset(df, superpop == "AFR")
+#order below is C,C,E,E,S,S,S,S,S,W,W,W,W,W,x,x AFR
+AFR$pop <- factor(AFR$pop, levels = c("Mbuti","Biaka","Luhya","Bantu Kenya", "San","Bantu Tswana", "Bantu Herero", "Ju_hoan_North", "Mende","Mandenka", "Gambian Mandinka", "Yoruba","Esan","African Caribbean", "African Ancestry SW"), ordered = TRUE)
+AFR <- AFR[order(AFR$pop),]
+write.csv(AFR,"gnomAD_AFR_ordered_K5.csv")
+AFR <- AFR[,c(1,3,5:9)]
+
+AMR <- subset(df, superpop == "AMR")
+write.csv(AMR,"gnomAD_AMR_K5.csv")
+AMR <- AMR[,c(1,3,5:9)]
+
+EAS <- subset(df, superpop == "EAS")
+write.csv(EAS,"gnomAD_EAS_K5.csv")
+EAS <- EAS[,c(1,3,5:9)]
+
+SAS <- subset(df, superpop == "SAS")
+write.csv(SAS,"gnomAD_SAS_K5.csv")
+SAS <- SAS[,c(1,3,5:9)]
+
+OCE <- subset(df, superpop == "OCE")
+OCE <- OCE[,c(1,3,5:9)]
+
+MDE <- subset(df, superpop == "MDE")
+MDE <- MDE[,c(1,3,5:9)]
+
+EUR <- subset(df, superpop == "EUR")
+#order below so that Northern EUR --> Southern EUR, and end w/ EUR in US
+EUR$pop <- factor(EUR$pop, levels = c("British","Finnish","Orcadian","Russian","Adygei","French","Basque","Iberian","Bergamo Italian","Tuscan","Toscani","Sardinian","BedouinB","CEPH"), ordered = TRUE)
+EUR <- EUR[order(EUR$pop),]
+write.csv(EUR,"gnomAD_EUR_ordered_K5.csv")
+EUR <- EUR[,c(1,3,5:9)]
+
+CAS <- subset(df, superpop == "CAS")
+CAS <- CAS[,c(1,3,5:9)]
+```
+
+AFR
+```{r}
+names(AFR)[1] <- "ID"
+names(AFR)[2] <- "population"
+names(AFR)[3] <- "Q1"
+names(AFR)[4] <- "Q2"
+names(AFR)[5] <- "Q3"
+names(AFR)[6] <- "Q4"
+names(AFR)[7] <- "Q5"
+
+
+mdat = reshape2::melt(AFR, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+
+```
+
+```{r}
+plot.new()            
+dev.new(width = 400,  
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=6)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("barplots_gnomAD_AFR_admixture_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+AMR
+```{r}
+AMR <- unique(AMR)
+names(AMR)[1] <- "ID"
+names(AMR)[2] <- "population"
+names(AMR)[3] <- "Q1"
+names(AMR)[4] <- "Q2"
+names(AMR)[5] <- "Q3"
+names(AMR)[6] <- "Q4"
+names(AMR)[7] <- "Q5"
+
+
+mdat = reshape2::melt(AMR, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+```{r}
+plot.new()            
+dev.new(width = 400,  
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=6)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("barplots_gnomAD_AMR_admixture_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+CAS
+```{r}
+CAS <- unique(CAS)
+# Add id and population label columns. Needed for reshape2::melting and plotting.
+names(CAS)[1] <- "ID"
+names(CAS)[2] <- "population"
+names(CAS)[3] <- "Q1"
+names(CAS)[4] <- "Q2"
+names(CAS)[5] <- "Q3"
+names(CAS)[6] <- "Q4"
+names(CAS)[7] <- "Q5"
+
+
+# Melt (reshape data from wide format to long format).
+mdat = reshape2::melt(CAS, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+```{r}
+plot.new()           
+dev.new(width = 400,   
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=6)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("barplots_gnomAD_CAS_admixture_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+EAS
+```{r}
+EAS <- unique(EAS)
+names(EAS)[1] <- "ID"
+names(EAS)[2] <- "population"
+names(EAS)[3] <- "Q1"
+names(EAS)[4] <- "Q2"
+names(EAS)[5] <- "Q3"
+names(EAS)[6] <- "Q4"
+names(EAS)[7] <- "Q5"
+
+
+mdat = reshape2::melt(EAS, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+```{r}
+plot.new()        
+dev.new(width = 400,  
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=6)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("barplots_gnomAD_EAS_admixture_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+EUR
+```{r}
+EUR <- unique(EUR)
+names(EUR)[1] <- "ID"
+names(EUR)[2] <- "population"
+names(EUR)[3] <- "Q1"
+names(EUR)[4] <- "Q2"
+names(EUR)[5] <- "Q3"
+names(EUR)[6] <- "Q4"
+names(EUR)[7] <- "Q5"
+
+
+mdat = reshape2::melt(EUR, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+```{r}
+plot.new()          
+dev.new(width = 400,  
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=6)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("barplots_gnomAD_EUR_admixture_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+MDE
+```{r}
+MDE <- unique(MDE)
+names(MDE)[1] <- "ID"
+names(MDE)[2] <- "population"
+names(MDE)[3] <- "Q1"
+names(MDE)[4] <- "Q2"
+names(MDE)[5] <- "Q3"
+names(MDE)[6] <- "Q4"
+names(MDE)[7] <- "Q5"
+
+
+mdat = reshape2::melt(MDE, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+```{r}
+plot.new()       
+dev.new(width = 400,  
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=6)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("barplots_gnomAD_MDE_admixture_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+OCE
+```{r}
+OCE <- unique(OCE)
+names(OCE)[1] <- "ID"
+names(OCE)[2] <- "population"
+names(OCE)[3] <- "Q1"
+names(OCE)[4] <- "Q2"
+names(OCE)[5] <- "Q3"
+names(OCE)[6] <- "Q4"
+names(OCE)[7] <- "Q5"
+
+
+mdat = reshape2::melt(OCE, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+```{r}
+plot.new()          
+dev.new(width = 400,  
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=6)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("barplots_gnomAD_OCE_admixture_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+SAS
+```{r}
+SAS <- unique(SAS)
+names(SAS)[1] <- "ID"
+names(SAS)[2] <- "population"
+names(SAS)[3] <- "Q1"
+names(SAS)[4] <- "Q2"
+names(SAS)[5] <- "Q3"
+names(SAS)[6] <- "Q4"
+names(SAS)[7] <- "Q5"
+
+
+mdat = reshape2::melt(SAS, id.vars=c("ID", "population"), 
+            variable.name="Ancestry", value.name="Fraction")
+
+mdat = mdat[
+  with(mdat, order(mdat$Fraction, mdat$Ancestry)),
+]
+```
+
+```{r}
+plot.new()            
+dev.new(width = 400,  
+        height = 600,
+        unit = "px",
+        noRStudioGD = TRUE)
+
+p = ggplot(mdat, aes(x=ID, y=Fraction, fill=Ancestry)) +
+    geom_bar(stat="identity", position="stack", colour="black", size=0.005) +
+    facet_grid(. ~ population, drop=TRUE, space="free", scales="free_x") +
+    theme(panel.spacing.x=grid:::unit(0.01, "lines")) +
+    theme(strip.text=element_text(size=6)) +
+    scale_x_discrete(expand=c(0, 0)) + scale_fill_manual(values=cbPalette)
+
+p
+
+png("barplots_gnomAD_SAS_admixture_K5.png", width=10, height=5, units="in", res=1000)
+p
+dev.off()
+
+```
+
+#WEU - combined w/ Middle East (MDE)
+#--------------
+

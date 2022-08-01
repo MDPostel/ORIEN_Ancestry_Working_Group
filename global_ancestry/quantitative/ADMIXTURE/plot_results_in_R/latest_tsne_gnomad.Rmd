@@ -1,0 +1,228 @@
+---
+title: "RTSNE"
+output: html_notebook
+---
+---------------------------------------------------
+Load libraries
+```{r}
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dplyr)
+library(data.table)
+library(tidyverse)
+library(plotly)
+library(plyr)
+library(stringi)
+library(Rtsne)
+library(readr)
+library(viridis)
+library(randomcoloR)
+```
+
+1) PLINK MDS on VCF --> Rtsne
+
+  A. ORIEN+gnomAD
+
+#Make csv of IDs and pops 
+```{r}
+rm(list=ls()) 
+
+#PUR 
+#IDs <- read.csv("tsne_samples_ref_info.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+ORI_E <- read.csv("Ethnicity.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+ORI_E <- ORI_E[,c(2,3)]
+ORI_R <- read.csv("race.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+ORI_R <- ORI_R[,c(2,3)]
+ORI <- merge(ORI_E, ORI_R, by="WES_ID")
+ORI$pop <- paste (ORI$pop.x, ";", ORI$pop.y)
+ORI <- ORI[,c(1,4)]
+#refs <- read.csv("HGDP_1000GP.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+#refs <- refs[,c(2:4)]
+#new_gnomad <- read.csv("gnomad_newIDs_withpops.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+#new_gnomad2 <- new_gnomad[,c(1,2)]
+gnomad <- read.csv("gnomad_IDs_pops_old.csv", header=TRUE, sep=",", stringsAsFactors = FALSE)
+#refs <- refs[,c(1,2)]
+#IDs <- rbind(ORI,refs)
+ORI$superpop <- paste("N/A")
+IDs <- rbind(gnomad,ORI)
+#IDs <- IDs[,c(1,2)]
+#IDs2 <- rbind(IDs, new_gnomad2)
+write.csv(IDs, "ORIEN_gnomad_IDs_pops.csv")
+#write.csv(IDs2, "ORIEN_gnomad_IDs_pops.csv")
+```
+
+```{r}
+IDs2 <- read.csv("ORIEN_gnomad_IDs_pops.csv", header = TRUE)
+#add IDs for ORIEN Puerto Ricans alone; for simplicity and checking one specific group from ORIEN and how it clusters
+  #SO DO:
+IDs2[IDs2$WES_ID == "A62321", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL242916", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL244009", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL248712", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL248748", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL249628", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL249730", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL249852", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL250813", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL262810", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL263770", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL263811", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL265242", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL265249", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL265261", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL272245", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL284874", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL284889", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL324930", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL324943", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL327368", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL329527", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL361046", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL361117", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL361122", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL363270", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL364296", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL364302", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL364316", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL366276", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL373516", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL380149", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL380181", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL380199", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL385054", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL385158", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL386926", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL391778", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL407207", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL413227", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL413712", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL413793", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL415977", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL416263", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL416313", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL419316", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL422879", "pop"] <- "Puerto Rican (ORIEN)"
+IDs2[IDs2$WES_ID == "SL434978", "pop"] <- "Puerto Rican (ORIEN)"
+
+
+```
+
+
+K20
+
+gnomAD + ORIEN 
+  Load csv from above if already made it
+```{r}
+#rm(list=ls()) 
+
+#Qref <- read.csv("gnomad.20.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+Qref <- read.csv("refs.20.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+#Qsam <- read.csv("ORIEN.20.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+Qsam <- read.csv("samples.20.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+Qboth <- rbind(Qref,Qsam)
+
+fam_ref <- read.csv("gnomad.fam", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+fam_sam <- read.csv("ORIEN.fam", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+fam_both <- rbind(fam_ref,fam_sam)
+
+names(fam_both)[1] <- "WES_ID"
+Qfam2 <- cbind(Qboth,fam_both)
+Qfam2 <- Qfam2[,c(21,1:20)]
+
+df4 <- merge(Qfam2, IDs2, by="WES_ID")
+data_tsne4 <- df4[,c(1,22,23,2:21)]
+
+```
+TSNE
+
+```{r}
+#initial dimensions 100
+
+set.seed(9)  
+D=3 #2 or 3
+P=1000
+K=20
+
+T4 <- data_tsne4[4:23]
+
+tsne_model_4 = Rtsne(T4, check_duplicates=FALSE, PCA=TRUE, pca_scale = TRUE, perplexity=P, theta=0.5, normalize = TRUE, initial_dims = 100, dims=D)
+
+data_tsne4$pop = as.factor(data_tsne4$pop)
+d_tsne_4 = as.data.frame(tsne_model_4$Y)  
+d_tsne_4_original=d_tsne_4
+d_tsne_4_original$pop_label = factor(data_tsne4$pop)
+
+d_tsne_4_original$pop_label <- factor(d_tsne_4_original$pop_label, levels = c("African Ancestry SW", 	"African Caribbean",	"Bantu Kenya", 	"Bantu South Africa", "Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju_hoan_North", 	"San", "Luhya", 	"Mandenka", 	"Mbuti",	"Mende",  	"Yoruba", 	"Colombian", 	"Karitiana", 	"Maya/Mayan", 	"Mexican Ancestry", 	"Peruvian", 	"Pima", "Surui", "Yakut", 	"Balochi", 	"Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan",  	"Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", "Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese",	"Kinh Vietnamese", "Lahu",	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", "Bedouin", "Bergamo Italian", "British", 	 	"CEPH", 	"Druze", 	"Finnish", 	"French", 	"Iberian",	"Mozabite", "Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", "Papuan Highlands", "Papuan Sepik",  "Puerto Rican", "Puerto Rican (ORIEN)"), ordered = TRUE)
+
+
+#n <- 99
+n <- 116
+palette <- distinctColorPalette(n, runTsne = TRUE)
+#p <- plot_ly(x=d_tsne_1_original$V1, y=d_tsne_1_original$V2, z=d_tsne_1_original$V3, type="scatter3d", mode="markers", size=1, color=d_tsne_1_original$pop_label)
+
+p <- plot_ly(x=d_tsne_4_original$V1, y=d_tsne_4_original$V2, z=d_tsne_4_original$V3, type="scatter3d", mode="markers", size=0.5, color=d_tsne_4_original$pop_label, colors="Spectral")
+p <- p %>% layout(title = 'TSNE of Admixture Q Values (K=20) for gnomAD+ORIEN; D=3, Seed=9, Perplexity=1000, PCA=True, Theta=0.5')
+p
+htmlwidgets::saveWidget(as_widget(p), "gnomAD-and-ORIEN_AdmixtureK20_seed9_D3_Perplexity1000_plinkPCA-MDS_4D-tsne_47Jun2022_PCAtrue_theta05.html")  
+```
+
+
+--------
+K16
+
+gnomAD + ORIEN 
+  Load csv from above if already made it
+```{r}
+#rm(list=ls()) 
+
+#Qref <- read.csv("gnomad.16.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+#Qsam <- read.csv("ORIEN.16.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+Qref <- read.csv("refs.16.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+Qsam <- read.csv("samples.16.Q", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+Qboth <- rbind(Qref,Qsam)
+
+fam_ref <- read.csv("gnomad.fam", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+fam_sam <- read.csv("ORIEN.fam", header = FALSE, sep = " ", stringsAsFactors = FALSE)
+fam_both <- rbind(fam_ref,fam_sam)
+
+names(fam_both)[1] <- "WES_ID"
+Qfam2 <- cbind(Qboth,fam_both)
+Qfam2 <- Qfam2[,c(17,1:16)]
+
+df4 <- merge(Qfam2, IDs2, by="WES_ID")
+data_tsne4 <- df4[,c(1,17,18,2:16)]
+
+```
+TSNE
+
+```{r}
+#initial dimensions 100
+
+set.seed(9)  
+D=3 #2 or 3
+P=1000
+K=16
+
+T4 <- data_tsne4[4:23]
+
+tsne_model_4 = Rtsne(T4, check_duplicates=FALSE, PCA=TRUE, pca_scale = TRUE, perplexity=P, theta=0.5, normalize = TRUE, initial_dims = 100, dims=D)
+
+data_tsne4$pop = as.factor(data_tsne4$pop)
+d_tsne_4 = as.data.frame(tsne_model_4$Y)  
+d_tsne_4_original=d_tsne_4
+d_tsne_4_original$pop_label = factor(data_tsne4$pop)
+
+d_tsne_4_original$pop_label <- factor(d_tsne_4_original$pop_label, levels = c("African Ancestry SW", 	"African Caribbean",	"Bantu Kenya", 	"Bantu South Africa", "Biaka", 	"Esan", 	"Gambian Mandinka", 	"Ju_hoan_North", 	"San", "Luhya", 	"Mandenka", 	"Mbuti",	"Mende",  	"Yoruba", 	"Colombian", 	"Karitiana", 	"Maya/Mayan", 	"Mexican Ancestry", 	"Peruvian", 	"Pima", "Surui", "Yakut", 	"Balochi", 	"Bengali", 	"Brahui", 	"Burusho", 	"Gujarati", 	"Hazara", 	"Kalash", 	"Makrani", 	"Pathan",  	"Punjabi", 	"Sindhi", 	"Tamil", 	"Telugu", 	"Uygur", 	"Cambodian", "Dai Chinese", 	"Daur", 	"Han", 	"Han Chinese", 	"Hezhen", 	"Japanese",	"Kinh Vietnamese", "Lahu",	"Miao", 	"Mongolian", 	"Naxi", 	"Northern Han", 	"Oroqen", 	"She", 	"Southern Han Chinese", 	"Tu", 	"Tujia", 	"Xibo", 	"Yi", 	"Adygei", 	"Basque", "Bedouin", "Bergamo Italian", "British", 	 	"CEPH", 	"Druze", 	"Finnish", 	"French", 	"Iberian",	"Mozabite", "Orcadian", 	"Palestinian", 	"Russian", 	"Sardinian", 	"Toscani", 	"Tuscan", 	"Bougainville", "Papuan Highlands", "Papuan Sepik",  "Puerto Rican", "Puerto Rican (ORIEN)"), ordered = TRUE)
+
+
+#n <- 99
+n <- 116
+palette <- distinctColorPalette(n, runTsne = TRUE)
+#p <- plot_ly(x=d_tsne_1_original$V1, y=d_tsne_1_original$V2, z=d_tsne_1_original$V3, type="scatter3d", mode="markers", size=1, color=d_tsne_1_original$pop_label)
+
+p <- plot_ly(x=d_tsne_4_original$V1, y=d_tsne_4_original$V2, z=d_tsne_4_original$V3, type="scatter3d", mode="markers", size=0.5, color=d_tsne_4_original$pop_label, colors="Spectral")
+p <- p %>% layout(title = 'TSNE of Admixture Q Values (K=16) for gnomAD+ORIEN; D=3, Seed=9, Perplexity=1000, PCA=True, Theta=0.5')
+p
+htmlwidgets::saveWidget(as_widget(p), "gnomAD-and-ORIEN_AdmixtureK16_seed9_D3_Perplexity1000_plinkPCA-MDS_4D-tsne_47Jun2022_PCAtrue_theta05.html")  
+```

@@ -1,0 +1,1308 @@
+---
+title: "Admixture decision tree"
+output: html_notebook
+---
+
+Libraries
+```{r}
+library(datasets)
+library(caTools)
+library(party)
+library(dplyr)
+library(magrittr)
+library(partykit)
+library(plotly)
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(data.table)
+library(tidyverse)
+library(stringi)
+setwd("/Users/mackenziepostel/Library/CloudStorage/GoogleDrive-mpostel@usc.edu/My Drive/Postel_Craig/ORIEN_Ancestry/admix")
+```
+
+Ignore sections w/ "#" -- don't run them.
+
+```{r}
+refpops2 <- read.csv("ORIEN_gnomad_IDs_pops.csv")
+```
+
+K=5
+    #samples
+```{r}
+Q1 <- read.table("samples.5.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+ORIEN <- cbind(Q1,raw_fam1)
+ORIEN <- ORIEN[,c(6,1:5)]
+names(ORIEN)[1] <- "WES_ID"
+names(ORIEN)[2] <- "Q1"
+names(ORIEN)[3] <- "Q2"
+names(ORIEN)[4] <- "Q3"
+names(ORIEN)[5] <- "Q4"
+names(ORIEN)[6] <- "Q5"
+
+K5 <- merge(refpops2,ORIEN, by="WES_ID")
+K5 <- K5[,c(1,4:9)]
+names(K5)[1] <- "Ref_ID"
+shuffle_index <- sample(1:nrow(K5))
+K5 <- K5[shuffle_index, ]
+
+K5$superpop <- as.factor(K5$superpop)
+
+sample_data = sample.split(K5 , SplitRatio = 0.9)
+train_data <- subset(K5 , sample_data == TRUE)
+test_data <- subset(K5 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(filename="K5_ORIEN.png", width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at1 <- table(test_data$superpop, predict_model)
+m_at1
+
+accuracy_K5samples <- sum(diag(m_at1)) / sum(m_at1)
+print(paste('Accuracy for K=5 test is found to be', accuracy_K5samples))
+```
+    refs
+```{r}
+Q1 <- read.table("refs.5.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(6,1:5)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+
+K5 <- merge(refpops2,gnomAD, by="WES_ID")
+K5 <- K5[,c(1,4:9)]
+names(K5)[1] <- "Ref_ID"
+shuffle_index <- sample(1:nrow(K5))
+K5 <- K5[shuffle_index, ]
+
+K5$superpop <- as.factor(K5$superpop)
+
+sample_data = sample.split(K5 , SplitRatio = 0.5)
+train_data <- subset(K5 , sample_data == TRUE)
+test_data <- subset(K5 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(filename="K5_gnomAD.png", width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at2 <- table(test_data$superpop, predict_model)
+m_at2
+
+accuracy_K5refs <- sum(diag(m_at2)) / sum(m_at2)
+print(paste('Accuracy for K=5 test is found to be', accuracy_K5refs))
+```
+    simulation
+```{r}
+data <- read.table("simulation_results_K5.txt", sep = "\t", header = FALSE)
+names(data)[1] <- "Ref_ID"
+names(data)[2] <- "superpop"
+names(data)[3] <- "Q1"
+names(data)[4] <- "Q2"
+names(data)[5] <- "Q3"
+names(data)[6] <- "Q4"
+names(data)[7] <- "Q5"
+
+shuffle_index <- sample(1:nrow(data))
+data <- data[shuffle_index, ]
+data$superpop <- as.factor(data$superpop)
+
+sample_data = sample.split(data, SplitRatio = 0.9)
+train_data <- subset(data, sample_data == TRUE)
+test_data <- subset(data, sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(filename="K5_1000GP_notingnomAD.png", width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at3 <- table(test_data$superpop, predict_model)
+m_at3
+
+accuracy_K5sim <- sum(diag(m_at3)) / sum(m_at3)
+print(paste('Accuracy for K=5 test is found to be', accuracy_K5sim))
+```
+
+K=6
+    #samples
+```{r}
+Q1 <- read.table("samples.6.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+ORIEN <- cbind(Q1,raw_fam1)
+ORIEN <- ORIEN[,c(7,1:6)]
+names(ORIEN)[1] <- "WES_ID"
+names(ORIEN)[2] <- "Q1"
+names(ORIEN)[3] <- "Q2"
+names(ORIEN)[4] <- "Q3"
+names(ORIEN)[5] <- "Q4"
+names(ORIEN)[6] <- "Q5"
+names(ORIEN)[7] <- "Q6"
+K6 <- merge(refpops2,ORIEN, by="WES_ID")
+K6 <- K6[,c(1,4:10)]
+names(K6)[1] <- "Ref_ID"
+
+
+shuffle_index <- sample(1:nrow(K6))
+K6 <- K6[shuffle_index, ]
+
+K6$superpop <- as.factor(K6$superpop)
+
+sample_data = sample.split(K6 , SplitRatio = 0.9)
+train_data <- subset(K6 , sample_data == TRUE)
+test_data <- subset(K6 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K6_ORIEN.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at4 <- table(test_data$superpop, predict_model)
+m_at4
+
+accuracy_K6samples <- sum(diag(m_at4)) / sum(m_at4)
+print(paste('Accuracy for K=6 test is found to be', accuracy_K6samples))
+```
+    refs
+```{r}
+
+Q1 <- read.table("refs.6.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(7,1:6)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+names(gnomAD)[7] <- "Q6"
+K6 <- merge(refpops2,gnomAD, by="WES_ID")
+K6 <- K6[,c(1,4:10)]
+names(K6)[1] <- "Ref_ID"
+
+
+shuffle_index <- sample(1:nrow(K6))
+K6 <- K6[shuffle_index, ]
+
+K6$superpop <- as.factor(K6$superpop)
+
+sample_data = sample.split(K6 , SplitRatio = 0.9)
+train_data <- subset(K6 , sample_data == TRUE)
+test_data <- subset(K6 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K6_gnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at5 <- table(test_data$superpop, predict_model)
+m_at5
+
+accuracy_K6refs <- sum(diag(m_at5)) / sum(m_at5)
+print(paste('Accuracy for K=6 test is found to be', accuracy_K6refs))
+```
+    simulation
+```{r}
+data <- read.table("simulation_results_K6.txt", sep = "\t", header = FALSE)
+names(data)[1] <- "Ref_ID"
+names(data)[2] <- "superpop"
+names(data)[3] <- "Q1"
+names(data)[4] <- "Q2"
+names(data)[5] <- "Q3"
+names(data)[6] <- "Q4"
+names(data)[7] <- "Q5"
+names(data)[8] <- "Q6"
+
+shuffle_index <- sample(1:nrow(data))
+data <- data[shuffle_index, ]
+data$superpop <- as.factor(data$superpop)
+
+sample_data = sample.split(data, SplitRatio = 0.9)
+train_data <- subset(data, sample_data == TRUE)
+test_data <- subset(data, sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K6_1000GP_notingnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at6 <- table(test_data$superpop, predict_model)
+m_at6
+
+accuracy_K6sim <- sum(diag(m_at6)) / sum(m_at6)
+print(paste('Accuracy for K=6 test is found to be', accuracy_K6sim))
+```
+
+K=7
+    #samples
+```{r}
+Q1 <- read.table("samples.7.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+ORIEN <- cbind(Q1,raw_fam1)
+ORIEN <- ORIEN[,c(8,1:7)]
+names(ORIEN)[1] <- "WES_ID"
+names(ORIEN)[2] <- "Q1"
+names(ORIEN)[3] <- "Q2"
+names(ORIEN)[4] <- "Q3"
+names(ORIEN)[5] <- "Q4"
+names(ORIEN)[6] <- "Q5"
+names(ORIEN)[7] <- "Q6"
+names(ORIEN)[8] <- "Q7"
+K7 <- merge(refpops2,ORIEN, by="WES_ID")
+K7 <- K7[,c(1,4:11)]
+names(K7)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K7))
+K7 <- K7[shuffle_index, ]
+
+K7$superpop <- as.factor(K7$superpop)
+
+sample_data = sample.split(K7 , SplitRatio = 0.9)
+train_data <- subset(K7 , sample_data == TRUE)
+test_data <- subset(K7 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K7_ORIEN.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at7 <- table(test_data$superpop, predict_model)
+m_at7
+
+accuracy_K7samples <- sum(diag(m_at7)) / sum(m_at7)
+print(paste('Accuracy for K=7 test is found to be', accuracy_K7samples))
+```
+    refs
+```{r}
+
+Q1 <- read.table("refs.7.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(8,1:7)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+names(gnomAD)[7] <- "Q6"
+names(gnomAD)[8] <- "Q7"
+K7 <- merge(refpops2,gnomAD, by="WES_ID")
+K7 <- K7[,c(1,4:11)]
+names(K7)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K7))
+K7 <- K7[shuffle_index, ]
+
+K7$superpop <- as.factor(K7$superpop)
+
+sample_data = sample.split(K7 , SplitRatio = 0.9)
+train_data <- subset(K7 , sample_data == TRUE)
+test_data <- subset(K7 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K7_gnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at8 <- table(test_data$superpop, predict_model)
+m_at8
+
+accuracy_K7refs <- sum(diag(m_at8)) / sum(m_at8)
+print(paste('Accuracy for K=7 test is found to be', accuracy_K7refs))
+```
+    simulation
+```{r}
+data <- read.table("simulation_results_K7.txt", sep = "\t", header = FALSE)
+names(data)[1] <- "Ref_ID"
+names(data)[2] <- "superpop"
+names(data)[3] <- "Q1"
+names(data)[4] <- "Q2"
+names(data)[5] <- "Q3"
+names(data)[6] <- "Q4"
+names(data)[7] <- "Q5"
+names(data)[8] <- "Q6"
+names(data)[9] <- "Q7"
+
+shuffle_index <- sample(1:nrow(data))
+data <- data[shuffle_index, ]
+data$superpop <- as.factor(data$superpop)
+sample_data = sample.split(data, SplitRatio = 0.9)
+train_data <- subset(data, sample_data == TRUE)
+test_data <- subset(data, sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K7_1000GP_notingnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at9 <- table(test_data$superpop, predict_model)
+m_at9
+
+accuracy_K7sim <- sum(diag(m_at9)) / sum(m_at9)
+print(paste('Accuracy for K=7 test is found to be', accuracy_K7sim))
+```
+
+K=8
+    #samples
+```{r}
+Q1 <- read.table("samples.8.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+ORIEN <- cbind(Q1,raw_fam1)
+ORIEN <- ORIEN[,c(9,1:8)]
+names(ORIEN)[1] <- "WES_ID"
+names(ORIEN)[2] <- "Q1"
+names(ORIEN)[3] <- "Q2"
+names(ORIEN)[4] <- "Q3"
+names(ORIEN)[5] <- "Q4"
+names(ORIEN)[6] <- "Q5"
+names(ORIEN)[7] <- "Q6"
+names(ORIEN)[8] <- "Q7"
+names(ORIEN)[9] <- "Q8"
+K8 <- merge(refpops2,ORIEN, by="WES_ID")
+K8 <- K8[,c(1,4:12)]
+names(K8)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K8))
+K8 <- K8[shuffle_index, ]
+
+K8$superpop <- as.factor(K8$superpop)
+
+sample_data = sample.split(K8 , SplitRatio = 0.9)
+train_data <- subset(K8 , sample_data == TRUE)
+test_data <- subset(K8 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K8_ORIEN.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at10 <- table(test_data$superpop, predict_model)
+m_at10
+
+accuracy_K8samples <- sum(diag(m_at10)) / sum(m_at10)
+print(paste('Accuracy for K=8 test is found to be', accuracy_K8samples))
+```
+    refs
+```{r}
+
+Q1 <- read.table("refs.8.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(9,1:8)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+names(gnomAD)[7] <- "Q6"
+names(gnomAD)[8] <- "Q7"
+names(gnomAD)[9] <- "Q8"
+K8 <- merge(refpops2,gnomAD, by="WES_ID")
+K8 <- K8[,c(1,4:12)]
+names(K8)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K8))
+K8 <- K8[shuffle_index, ]
+
+K8$superpop <- as.factor(K8$superpop)
+
+sample_data = sample.split(K8 , SplitRatio = 0.9)
+train_data <- subset(K8 , sample_data == TRUE)
+test_data <- subset(K8 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K8_gnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at11 <- table(test_data$superpop, predict_model)
+m_at11
+
+accuracy_K8refs <- sum(diag(m_at11)) / sum(m_at11)
+print(paste('Accuracy for K=8 test is found to be', accuracy_K8refs))
+```
+    simulation  
+```{r}
+data <- read.table("simulation_results_K8.txt", sep = "\t", header = FALSE)
+names(data)[1] <- "Ref_ID"
+names(data)[2] <- "superpop"
+names(data)[3] <- "Q1"
+names(data)[4] <- "Q2"
+names(data)[5] <- "Q3"
+names(data)[6] <- "Q4"
+names(data)[7] <- "Q5"
+names(data)[8] <- "Q6"
+names(data)[9] <- "Q7"
+names(data)[10] <- "Q8"
+
+shuffle_index <- sample(1:nrow(data))
+data <- data[shuffle_index, ]
+data$superpop <- as.factor(data$superpop)
+sample_data = sample.split(data, SplitRatio = 0.9)
+train_data <- subset(data, sample_data == TRUE)
+test_data <- subset(data, sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K8_1000GP_notingnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at12 <- table(test_data$superpop, predict_model)
+m_at12
+
+accuracy_K8sim <- sum(diag(m_at12)) / sum(m_at12)
+print(paste('Accuracy for K=8 test is found to be', accuracy_K8sim))
+```
+
+K=9
+    samples
+```{r}
+Q1 <- read.table("samples.9.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+ORIEN <- cbind(Q1,raw_fam1)
+ORIEN <- ORIEN[,c(10,1:9)]
+names(ORIEN)[1] <- "WES_ID"
+names(ORIEN)[2] <- "Q1"
+names(ORIEN)[3] <- "Q2"
+names(ORIEN)[4] <- "Q3"
+names(ORIEN)[5] <- "Q4"
+names(ORIEN)[6] <- "Q5"
+names(ORIEN)[7] <- "Q6"
+names(ORIEN)[8] <- "Q7"
+names(ORIEN)[9] <- "Q8"
+names(ORIEN)[10] <- "Q9"
+K9 <- merge(refpops2,ORIEN, by="WES_ID")
+K9 <- K9[,c(1,4:13)]
+names(K9)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K9))
+K9 <- K9[shuffle_index, ]
+
+K9$superpop <- as.factor(K9$superpop)
+
+sample_data = sample.split(K9 , SplitRatio = 0.9)
+train_data <- subset(K9 , sample_data == TRUE)
+test_data <- subset(K9 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K9_ORIEN.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at13 <- table(test_data$superpop, predict_model)
+m_at13
+
+accuracy_K9samples <- sum(diag(m_at13)) / sum(m_at13)
+print(paste('Accuracy for K=9 test is found to be', accuracy_K9samples))
+```
+    refs
+```{r}
+
+Q1 <- read.table("refs.9.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(10,1:9)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+names(gnomAD)[7] <- "Q6"
+names(gnomAD)[8] <- "Q7"
+names(gnomAD)[9] <- "Q8"
+names(gnomAD)[10] <- "Q9"
+K9 <- merge(refpops2,gnomAD, by="WES_ID")
+K9 <- K9[,c(1,4:13)]
+names(K9)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K9))
+K9 <- K9[shuffle_index, ]
+
+K9$superpop <- as.factor(K9$superpop)
+
+sample_data = sample.split(K9 , SplitRatio = 0.9)
+train_data <- subset(K9 , sample_data == TRUE)
+test_data <- subset(K9 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K9_gnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at14 <- table(test_data$superpop, predict_model)
+m_at14
+
+accuracy_K9refs <- sum(diag(m_at14)) / sum(m_at14)
+print(paste('Accuracy for K=9 test is found to be', accuracy_K9refs))
+```
+    simulation
+```{r}
+data <- read.table("simulation_results_K9.txt", sep = "\t", header = FALSE)
+names(data)[1] <- "Ref_ID"
+names(data)[2] <- "superpop"
+names(data)[3] <- "Q1"
+names(data)[4] <- "Q2"
+names(data)[5] <- "Q3"
+names(data)[6] <- "Q4"
+names(data)[7] <- "Q5"
+names(data)[8] <- "Q6"
+names(data)[9] <- "Q7"
+names(data)[10] <- "Q8"
+names(data)[11] <- "Q9"
+
+shuffle_index <- sample(1:nrow(data))
+data <- data[shuffle_index, ]
+data$superpop <- as.factor(data$superpop)
+sample_data = sample.split(data, SplitRatio = 0.9)
+train_data <- subset(data, sample_data == TRUE)
+test_data <- subset(data, sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K9_1000GP_notingnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at15 <- table(test_data$superpop, predict_model)
+m_at15
+
+accuracy_K9sim <- sum(diag(m_at15)) / sum(m_at15)
+print(paste('Accuracy for K=9 test is found to be', accuracy_K9sim))
+```
+
+K=10
+    samples
+```{r}
+Q1 <- read.table("samples.10.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+ORIEN <- cbind(Q1,raw_fam1)
+ORIEN <- ORIEN[,c(11,1:10)]
+names(ORIEN)[1] <- "WES_ID"
+names(ORIEN)[2] <- "Q1"
+names(ORIEN)[3] <- "Q2"
+names(ORIEN)[4] <- "Q3"
+names(ORIEN)[5] <- "Q4"
+names(ORIEN)[6] <- "Q5"
+names(ORIEN)[7] <- "Q6"
+names(ORIEN)[8] <- "Q7"
+names(ORIEN)[9] <- "Q8"
+names(ORIEN)[10] <- "Q9"
+names(ORIEN)[11] <- "Q10"
+K10 <- merge(refpops2,ORIEN, by="WES_ID")
+K10 <- K10[,c(1,4:14)]
+names(K10)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K10))
+K10 <- K10[shuffle_index, ]
+
+K10$superpop <- as.factor(K10$superpop)
+
+sample_data = sample.split(K10 , SplitRatio = 0.9)
+train_data <- subset(K10 , sample_data == TRUE)
+test_data <- subset(K10 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K10_ORIEN.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at16 <- table(test_data$superpop, predict_model)
+m_at16
+
+accuracy_K10samples <- sum(diag(m_at16)) / sum(m_at16)
+print(paste('Accuracy for K=10 test is found to be', accuracy_K10samples))
+```
+    refs
+```{r}
+
+Q1 <- read.table("refs.10.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(11,1:10)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+names(gnomAD)[7] <- "Q6"
+names(gnomAD)[8] <- "Q7"
+names(gnomAD)[9] <- "Q8"
+names(gnomAD)[10] <- "Q9"
+names(gnomAD)[11] <- "Q10"
+K10 <- merge(refpops2,gnomAD, by="WES_ID")
+K10 <- K10[,c(1,4:14)]
+names(K10)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K10))
+K10 <- K10[shuffle_index, ]
+
+K10$superpop <- as.factor(K10$superpop)
+
+sample_data = sample.split(K10 , SplitRatio = 0.9)
+train_data <- subset(K10 , sample_data == TRUE)
+test_data <- subset(K10 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K10_gnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at17 <- table(test_data$superpop, predict_model)
+m_at17
+
+accuracy_K10refs <- sum(diag(m_at17)) / sum(m_at17)
+print(paste('Accuracy for K=10 test is found to be', accuracy_K10refs))
+```
+    simulation  
+```{r}
+data <- read.table("simulation_results_K10.txt", sep = "\t", header = FALSE)
+names(data)[1] <- "Ref_ID"
+names(data)[2] <- "superpop"
+names(data)[3] <- "Q1"
+names(data)[4] <- "Q2"
+names(data)[5] <- "Q3"
+names(data)[6] <- "Q4"
+names(data)[7] <- "Q5"
+names(data)[8] <- "Q6"
+names(data)[9] <- "Q7"
+names(data)[10] <- "Q8"
+names(data)[11] <- "Q9"
+names(data)[12] <- "Q10"
+
+shuffle_index <- sample(1:nrow(data))
+data <- data[shuffle_index, ]
+data$superpop <- as.factor(data$superpop)
+sample_data = sample.split(data, SplitRatio = 0.9)
+train_data <- subset(data, sample_data == TRUE)
+test_data <- subset(data, sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K10_1000GP_notingnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at18 <- table(test_data$superpop, predict_model)
+m_at18
+
+accuracy_K10sim <- sum(diag(m_at18)) / sum(m_at18)
+print(paste('Accuracy for K=10 test is found to be', accuracy_K10sim))
+```
+
+K=16
+    #samples
+```{r}
+Q1 <- read.table("samples.16.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+ORIEN <- cbind(Q1,raw_fam1)
+ORIEN <- ORIEN[,c(17,1:16)]
+names(ORIEN)[1] <- "WES_ID"
+names(ORIEN)[2] <- "Q1"
+names(ORIEN)[3] <- "Q2"
+names(ORIEN)[4] <- "Q3"
+names(ORIEN)[5] <- "Q4"
+names(ORIEN)[6] <- "Q5"
+names(ORIEN)[7] <- "Q6"
+names(ORIEN)[8] <- "Q7"
+names(ORIEN)[9] <- "Q8"
+names(ORIEN)[10] <- "Q9"
+names(ORIEN)[11] <- "Q10"
+names(ORIEN)[12] <- "Q11"
+names(ORIEN)[13] <- "Q12"
+names(ORIEN)[14] <- "Q13"
+names(ORIEN)[15] <- "Q14"
+names(ORIEN)[16] <- "Q15"
+names(ORIEN)[17] <- "Q16"
+K16 <- merge(refpops2,ORIEN, by="WES_ID")
+K16 <- K16[,c(1,4:20)]
+names(K16)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K16))
+K16 <- K16[shuffle_index, ]
+
+K16$superpop <- as.factor(K16$superpop)
+
+sample_data = sample.split(K16 , SplitRatio = 0.9)
+train_data <- subset(K16 , sample_data == TRUE)
+test_data <- subset(K16 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10 + Q11 + Q12 + Q13 + Q14 + Q15 + Q16
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K16_ORIEN.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at19 <- table(test_data$superpop, predict_model)
+m_at19
+
+accuracy_K16samples <- sum(diag(m_at19)) / sum(m_at19)
+print(paste('Accuracy for K=16 test is found to be', accuracy_K16samples))
+```
+    refs
+```{r}
+
+Q1 <- read.table("refs.16.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(17,1:16)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+names(gnomAD)[7] <- "Q6"
+names(gnomAD)[8] <- "Q7"
+names(gnomAD)[9] <- "Q8"
+names(gnomAD)[10] <- "Q9"
+names(gnomAD)[11] <- "Q10"
+names(gnomAD)[12] <- "Q11"
+names(gnomAD)[13] <- "Q12"
+names(gnomAD)[14] <- "Q13"
+names(gnomAD)[15] <- "Q14"
+names(gnomAD)[16] <- "Q15"
+names(gnomAD)[17] <- "Q16"
+K16 <- merge(refpops2,gnomAD, by="WES_ID")
+K16 <- K16[,c(1,4:20)]
+names(K16)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K16))
+K16 <- K16[shuffle_index, ]
+
+K16$superpop <- as.factor(K16$superpop)
+
+sample_data = sample.split(K16 , SplitRatio = 0.9)
+train_data <- subset(K16 , sample_data == TRUE)
+test_data <- subset(K16 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10 + Q11 + Q12 + Q13 + Q14 + Q15 + Q16
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K16_gnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at19 <- table(test_data$superpop, predict_model)
+m_at19
+
+accuracy_K16refs <- sum(diag(m_at19)) / sum(m_at19)
+print(paste('Accuracy for K=16 test is found to be', accuracy_K16refs))
+```
+    simulation    
+```{r}
+data <- read.table("simulation_results_K16.txt", sep = "\t", header = FALSE)
+names(data)[1] <- "Ref_ID"
+names(data)[2] <- "superpop"
+names(data)[3] <- "Q1"
+names(data)[4] <- "Q2"
+names(data)[5] <- "Q3"
+names(data)[6] <- "Q4"
+names(data)[7] <- "Q5"
+names(data)[8] <- "Q6"
+names(data)[9] <- "Q7"
+names(data)[10] <- "Q8"
+names(data)[11] <- "Q9"
+names(data)[12] <- "Q10"
+names(data)[13] <- "Q11"
+names(data)[14] <- "Q12"
+names(data)[15] <- "Q13"
+names(data)[16] <- "Q14"
+names(data)[17] <- "Q15"
+names(data)[18] <- "Q16"
+
+shuffle_index <- sample(1:nrow(data))
+data <- data[shuffle_index, ]
+data$superpop <- as.factor(data$superpop)
+sample_data = sample.split(data, SplitRatio = 0.9)
+train_data <- subset(data, sample_data == TRUE)
+test_data <- subset(data, sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10 + Q11 + Q12 + Q13 + Q14 + Q15 + Q16
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K16_1000GP_notingnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at19 <- table(test_data$superpop, predict_model)
+m_at19
+
+accuracy_K16sim <- sum(diag(m_at19)) / sum(m_at19)
+print(paste('Accuracy for K=16 test is found to be', accuracy_K16sim))
+```
+
+K=20
+    #samples
+```{r}
+Q1 <- read.table("samples.20.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("ORIEN.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+ORIEN <- cbind(Q1,raw_fam1)
+ORIEN <- ORIEN[,c(21,1:20)]
+names(ORIEN)[1] <- "WES_ID"
+names(ORIEN)[2] <- "Q1"
+names(ORIEN)[3] <- "Q2"
+names(ORIEN)[4] <- "Q3"
+names(ORIEN)[5] <- "Q4"
+names(ORIEN)[6] <- "Q5"
+names(ORIEN)[7] <- "Q6"
+names(ORIEN)[8] <- "Q7"
+names(ORIEN)[9] <- "Q8"
+names(ORIEN)[10] <- "Q9"
+names(ORIEN)[11] <- "Q10"
+names(ORIEN)[12] <- "Q11"
+names(ORIEN)[13] <- "Q12"
+names(ORIEN)[14] <- "Q13"
+names(ORIEN)[15] <- "Q14"
+names(ORIEN)[16] <- "Q15"
+names(ORIEN)[17] <- "Q16"
+names(ORIEN)[18] <- "Q17"
+names(ORIEN)[19] <- "Q18"
+names(ORIEN)[20] <- "Q19"
+names(ORIEN)[21] <- "Q20"
+K20 <- merge(refpops2,ORIEN, by="WES_ID")
+K20 <- K20[,c(1,4:24)]
+names(K20)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K20))
+K20 <- K20[shuffle_index, ]
+
+K20$superpop <- as.factor(K20$superpop)
+
+sample_data = sample.split(K20 , SplitRatio = 0.9)
+train_data <- subset(K20 , sample_data == TRUE)
+test_data <- subset(K20 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10 + Q11 + Q12 + Q13 + Q14 + Q15 + Q16 + Q17 + Q18 + Q19 + Q20
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K20_ORIEN.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at20 <- table(test_data$superpop, predict_model)
+m_at20
+
+accuracy_K20samples <- sum(diag(m_at20)) / sum(m_at20)
+print(paste('Accuracy for K=20 test is found to be', accuracy_K20samples))
+```
+    refs
+```{r}
+
+Q1 <- read.table("refs.20.Q", head = FALSE,  sep = " ", stringsAsFactors = FALSE)
+raw_fam1 <- read.table("gnomad.fam", head = FALSE, sep = " ", stringsAsFactors = FALSE)
+gnomAD <- cbind(Q1,raw_fam1)
+gnomAD <- gnomAD[,c(21,1:20)]
+names(gnomAD)[1] <- "WES_ID"
+names(gnomAD)[2] <- "Q1"
+names(gnomAD)[3] <- "Q2"
+names(gnomAD)[4] <- "Q3"
+names(gnomAD)[5] <- "Q4"
+names(gnomAD)[6] <- "Q5"
+names(gnomAD)[7] <- "Q6"
+names(gnomAD)[8] <- "Q7"
+names(gnomAD)[9] <- "Q8"
+names(gnomAD)[10] <- "Q9"
+names(gnomAD)[11] <- "Q10"
+names(gnomAD)[12] <- "Q11"
+names(gnomAD)[13] <- "Q12"
+names(gnomAD)[14] <- "Q13"
+names(gnomAD)[15] <- "Q14"
+names(gnomAD)[16] <- "Q15"
+names(gnomAD)[17] <- "Q16"
+names(gnomAD)[18] <- "Q17"
+names(gnomAD)[19] <- "Q18"
+names(gnomAD)[20] <- "Q19"
+names(gnomAD)[21] <- "Q20"
+K20 <- merge(refpops2,gnomAD, by="WES_ID")
+K20 <- K20[,c(1,4:24)]
+names(K20)[1] <- "Ref_ID"
+
+shuffle_index <- sample(1:nrow(K20))
+K20 <- K20[shuffle_index, ]
+
+K20$superpop <- as.factor(K20$superpop)
+
+sample_data = sample.split(K20 , SplitRatio = 0.9)
+train_data <- subset(K20 , sample_data == TRUE)
+test_data <- subset(K20 , sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10 + Q11 + Q12 + Q13 + Q14 + Q15 + Q16 + Q17 + Q18 + Q19 + Q20
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K20_gnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at21 <- table(test_data$superpop, predict_model)
+m_at21
+
+accuracy_K20refs <- sum(diag(m_at21)) / sum(m_at21)
+print(paste('Accuracy for K=20 test is found to be', accuracy_K20refs))
+```
+    simulation    
+```{r}
+data <- read.table("simulation_results_K20.txt", sep = "\t", header = FALSE)
+names(data)[1] <- "Ref_ID"
+names(data)[2] <- "superpop"
+names(data)[3] <- "Q1"
+names(data)[4] <- "Q2"
+names(data)[5] <- "Q3"
+names(data)[6] <- "Q4"
+names(data)[7] <- "Q5"
+names(data)[8] <- "Q6"
+names(data)[9] <- "Q7"
+names(data)[10] <- "Q8"
+names(data)[11] <- "Q9"
+names(data)[12] <- "Q10"
+names(data)[13] <- "Q11"
+names(data)[14] <- "Q12"
+names(data)[15] <- "Q13"
+names(data)[16] <- "Q14"
+names(data)[17] <- "Q15"
+names(data)[18] <- "Q16"
+names(data)[19] <- "Q17"
+names(data)[20] <- "Q18"
+names(data)[21] <- "Q19"
+names(data)[22] <- "Q20"
+
+shuffle_index <- sample(1:nrow(data))
+data <- data[shuffle_index, ]
+data$superpop <- as.factor(data$superpop)
+sample_data = sample.split(data, SplitRatio = 0.9)
+train_data <- subset(data, sample_data == TRUE)
+test_data <- subset(data, sample_data == FALSE)
+
+formula <- superpop ~ Q1 + Q2 + Q3 + Q4 + Q5 + Q6 + Q7 + Q8 + Q9 + Q10 + Q11 + Q12 + Q13 + Q14 + Q15 + Q16 + Q17 + Q18 + Q19 + Q20
+model <- ctree(formula, data = train_data)
+
+p1 <- plot(model, gp = gpar(fontsize = 8),     
+  inner_panel=node_inner,
+  ip_args=list(
+       abbreviate = FALSE, 
+       id = FALSE)
+  )
+p1
+png(file="K20_1000GP_notingnomAD.png",
+width=600, height=350)
+p1
+dev.off()
+
+predict_model <- predict(model , test_data)
+
+m_at22 <- table(test_data$superpop, predict_model)
+m_at22
+
+accuracy_K20sim <- sum(diag(m_at22)) / sum(m_at22)
+print(paste('Accuracy for K=16 test is found to be', accuracy_K20sim))
+```
+
+
+Summary stats
+```{r}
+#print(paste('Accuracy for K=5 test on ORIEN samples is', accuracy_K5samples))
+print(paste('Accuracy for K=5 test on gnomAD refs is', accuracy_K5refs))
+print(paste('Accuracy for K=5 test on 1000GP samples NOT in gnomAD is', accuracy_K5sim))
+
+#print(paste('Accuracy for K=6 test on ORIEN samples is', accuracy_K6samples))
+print(paste('Accuracy for K=6 test on gnomAD refs is', accuracy_K6refs))
+print(paste('Accuracy for K=6 test on 1000GP samples NOT in gnomAD is', accuracy_K6sim))
+
+#print(paste('Accuracy for K=7 test on ORIEN samples is', accuracy_K7samples))
+print(paste('Accuracy for K=7 test on gnomAD refs is', accuracy_K7refs))
+print(paste('Accuracy for K=7 test on 1000GP samples NOT in gnomAD is', accuracy_K7sim))
+
+#print(paste('Accuracy for K=8 test on ORIEN samples is', accuracy_K8samples))
+print(paste('Accuracy for K=8 test on gnomAD refs is', accuracy_K8refs))
+print(paste('Accuracy for K=8 test on 1000GP samples NOT in gnomAD is', accuracy_K8sim))
+
+#print(paste('Accuracy for K=9 test on ORIEN samples is', accuracy_K9samples))
+print(paste('Accuracy for K=9 test on gnomAD refs is', accuracy_K9refs))
+print(paste('Accuracy for K=9 test on 1000GP samples NOT in gnomAD is', accuracy_K9sim))
+
+#print(paste('Accuracy for K=10 test on ORIEN samples is', accuracy_K10samples))
+print(paste('Accuracy for K=10 test on gnomAD refs is', accuracy_K10refs))
+print(paste('Accuracy for K=10 test on 1000GP samples NOT in gnomAD is', accuracy_K10sim))
+
+#print(paste('Accuracy for K=16 test on ORIEN samples is', accuracy_K16samples))
+print(paste('Accuracy for K=16 test on gnomAD refs is', accuracy_K16refs))
+print(paste('Accuracy for K=16 test on 1000GP samples NOT in gnomAD is', accuracy_K16sim))
+
+#print(paste('Accuracy for K=20 test on ORIEN samples is', accuracy_K20samples))
+print(paste('Accuracy for K=20 test on gnomAD refs is', accuracy_K20refs))
+print(paste('Accuracy for K=20 test on 1000GP samples NOT in gnomAD is', accuracy_K20sim))
+
+```
